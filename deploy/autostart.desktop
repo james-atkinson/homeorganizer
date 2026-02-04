@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Family Calendar Display
+Comment=Family Calendar Display Board (Debian / Raspberry Pi OS)
+Exec=__PROJECT_DIR__/deploy/launch-display.sh
+Icon=application-default-icon
+X-GNOME-Autostart-enabled=true
+NoDisplay=false
+Hidden=false
