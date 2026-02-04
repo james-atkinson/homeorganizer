@@ -104,8 +104,8 @@ onUnmounted(() => {
 <style scoped>
 .news-headlines {
   padding: 12px 16px;
-  min-height: 200px;
-  height: 200px;
+  min-height: 160px;
+  height: 160px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -118,7 +118,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   max-width: 92%;
-  min-height: 4.8rem;
+  min-height: 3.84rem;
 }
 .headline > * + * {
   margin-top: 5px;
@@ -139,7 +139,7 @@ onUnmounted(() => {
   color: #ffffff;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
   text-align: center;
-  min-height: 5.2rem;
+  min-height: 4.16rem;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   line-clamp: 3;
