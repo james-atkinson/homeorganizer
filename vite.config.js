@@ -17,6 +17,8 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    assetsDir: 'assets'
+    assetsDir: 'assets',
+    // Target older browsers (e.g. Chromium on Raspberry Pi) so the bundle runs without syntax errors
+    target: 'es2015'
   }
 })

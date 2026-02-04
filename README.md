@@ -245,6 +245,17 @@ Your system is **Raspbian Stretch** (Debian 9). Node.js 18 requires glibc ≥ 2.
 - Verify the project path in the autostart file matches your install
 - Check system logs for errors
 
+### Server on Ubuntu, display on Pi (white page on Pi only)
+
+If the app works in Safari/Chrome on a laptop at `http://<ubuntu-ip>:3000/` but shows a white page in Chromium on the Pi:
+
+1. **See what’s failing on the Pi** – Rebuild on Ubuntu (pull latest, run `pnpm run build`, restart the server) so the in-page error box is in the build. Open `http://<ubuntu-ip>:3000/` on the Pi again. If a dark box with an error appears, that message is the cause (e.g. unsupported JS = need older build target).
+2. **Use an older JS build target** – The project is built with `target: 'es2015'` so the bundle runs on older Chromium. On **Ubuntu** (where the server runs), run `pnpm run build` again, restart the server, then reload on the Pi.
+3. **Launch Chromium on the Pi with Pi-friendly flags** – On the Pi, open the Ubuntu URL with:  
+   `chromium-browser --disable-gpu --no-sandbox --disable-software-rasterizer --disable-dev-shm-usage http://<ubuntu-ip>:3000/`  
+   (or create a script/shortcut that runs this so the display always uses these flags).
+4. **Check Chromium version on the Pi** – Run `chromium-browser --version`. If it’s very old (e.g. &lt; 70), the in-page error box should show the exact JS error.
+
 ### Chromium shows white or blank screen (Raspberry Pi)
 
 - **Error box on the page:** The app now shows a dark “load-error” box if the script fails or throws. Read that message (e.g. “Failed to load module script” = JS file not found; run `pnpm run build` on the Pi).
