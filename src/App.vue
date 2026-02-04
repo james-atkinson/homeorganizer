@@ -71,7 +71,8 @@ body {
 }
 
 .left-column {
-  width: 25%;
+  width: 30%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -80,7 +81,8 @@ body {
 }
 
 .right-column {
-  width: 75%;
+  width: 70%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   padding-right: 24px;

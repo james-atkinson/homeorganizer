@@ -103,9 +103,9 @@ onUnmounted(() => {
 
 <style scoped>
 .news-headlines {
-  padding: 5px 8px;
-  min-height: 120px;
-  height: 120px;
+  padding: 12px 16px;
+  min-height: 200px;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -117,14 +117,14 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  max-width: 90%;
-  min-height: 4.2rem;
+  gap: 6px;
+  max-width: 92%;
+  min-height: 6rem;
 }
 
 .headline-source {
   flex-shrink: 0;
-  font-size: 1.04rem;
+  font-size: 1.4rem;
   font-weight: 600;
   color: #ffffff;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
@@ -132,15 +132,15 @@ onUnmounted(() => {
 }
 
 .headline-title {
-  font-size: 1.82rem;
-  line-height: 1.25;
+  font-size: 2.5rem;
+  line-height: 1.3;
   color: #ffffff;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
   text-align: center;
-  min-height: 4.55rem;
+  min-height: 6.5rem;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

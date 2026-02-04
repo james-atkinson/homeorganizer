@@ -170,15 +170,15 @@ onUnmounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 12px;
 }
 
 .upcoming-events.dense .events-list {
-  gap: 3px;
+  gap: 8px;
 }
 
 .upcoming-events.packed .events-list {
-  gap: 2px;
+  gap: 6px;
 }
 
 .event-item {

@@ -270,23 +270,23 @@ onUnmounted(() => {
 }
 
 .forecast-header {
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #ffffff;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   padding-bottom: 0;
 }
 
 .forecast-day {
   display: grid;
-  grid-template-columns: 3rem 1fr 3rem 3rem 5.5rem;
+  grid-template-columns: 3.5rem 1fr 3.5rem 3.5rem 6rem;
   align-items: center;
-  padding: 0;
-  column-gap: 8px;
+  padding: 2px 0;
+  column-gap: 10px;
   row-gap: 0;
-  font-size: 0.8rem;
-  line-height: 1;
+  font-size: 1.05rem;
+  line-height: 1.2;
   color: rgba(255, 255, 255, 0.95);
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
@@ -303,8 +303,8 @@ onUnmounted(() => {
 }
 
 .forecast-icon {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
@@ -332,7 +332,7 @@ onUnmounted(() => {
 .forecast-temp-icon {
   font-family: 'Material Icons';
   font-weight: 400;
-  font-size: 1rem;
+  font-size: 1.2rem;
   line-height: 1;
   vertical-align: middle;
   color: inherit;
