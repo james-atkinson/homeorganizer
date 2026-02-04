@@ -148,15 +148,16 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
   margin-bottom: 4px;
+}
+.current-top > * + * {
+  margin-left: 8px;
 }
 
 .current-temp-block {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0;
 }
 
 .temperature {
@@ -178,7 +179,9 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+}
+.current-condition-block > * + * {
+  margin-top: 2px;
 }
 
 .current-icon {
@@ -201,11 +204,13 @@ onUnmounted(() => {
 .current-expected-precip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
   margin-top: 3px;
+}
+.current-expected-precip > * + * {
+  margin-left: 4px;
 }
 
 .current-expected-precip .md-icon {
@@ -229,24 +234,30 @@ onUnmounted(() => {
 
 .high-low {
   display: flex;
-  gap: 8px;
   margin-top: 2px;
   font-size: 1rem;
   color: rgba(255, 255, 255, 0.95);
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
+.high-low > * + * {
+  margin-left: 8px;
+}
 
 .sun-wind {
   display: flex;
   align-items: center;
-  gap: 20px;
   flex-wrap: wrap;
+}
+.sun-wind > * + * {
+  margin-left: 20px;
 }
 
 .sun-wind .labeled {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+}
+.sun-wind .labeled > * + * {
+  margin-left: 4px;
 }
 
 .sun-wind .md-icon {
@@ -266,7 +277,6 @@ onUnmounted(() => {
 .forecast {
   display: flex;
   flex-direction: column;
-  gap: 0;
   margin-top: 4px;
   padding-top: 2px;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
@@ -302,8 +312,10 @@ onUnmounted(() => {
 .forecast-condition {
   display: flex;
   align-items: center;
-  gap: 8px;
   min-width: 0;
+}
+.forecast-condition > * + * {
+  margin-left: 8px;
 }
 
 .forecast-icon {
@@ -325,8 +337,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 4px;
   min-width: 0;
+}
+.forecast-cell > * + * {
+  margin-left: 4px;
 }
 
 .forecast-precip {

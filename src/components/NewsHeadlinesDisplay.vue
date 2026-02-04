@@ -117,9 +117,11 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
   max-width: 92%;
   min-height: 4.8rem;
+}
+.headline > * + * {
+  margin-top: 5px;
 }
 
 .headline-source {

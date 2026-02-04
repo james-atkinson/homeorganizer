@@ -244,8 +244,10 @@ onUnmounted(() => {
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 4px;
   min-height: 0;
+}
+.day-events > * + * {
+  margin-top: 4px;
 }
 
 .day-event {
@@ -253,7 +255,6 @@ onUnmounted(() => {
   min-height: 2.25em;
   display: flex;
   flex-direction: column;
-  gap: 1px;
   padding: 4px 6px;
   border-radius: 4px;
   background: var(--event-bg, rgba(74, 144, 226, 0.25));
@@ -262,9 +263,13 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+.day-event > * + * {
+  margin-top: 1px;
+}
+
 .event-time {
   flex-shrink: 0;
-  font-size: clamp(0.55rem, 1.2vw, 0.7rem);
+  font-size: 0.65rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
@@ -275,7 +280,7 @@ onUnmounted(() => {
 .event-summary {
   flex: 1;
   min-height: 0;
-  font-size: clamp(0.6rem, 1.4vw, 0.85rem);
+  font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.2;
   color: #ffffff;

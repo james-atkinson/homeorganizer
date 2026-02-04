@@ -64,10 +64,12 @@ body {
 .main-content {
   display: flex;
   flex: 1;
-  gap: 5px;
   padding: 5px;
   padding-left: 20px;
   overflow: hidden;
+}
+.main-content > * + * {
+  margin-left: 5px;
 }
 
 .left-column {
@@ -75,9 +77,11 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
   overflow-y: auto;
   overflow-x: hidden;
+}
+.left-column > * + * {
+  margin-top: 1px;
 }
 
 .right-column {

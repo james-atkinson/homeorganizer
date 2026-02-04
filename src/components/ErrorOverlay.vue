@@ -20,13 +20,15 @@ import { fatalError } from '../utils/fatalError.js';
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
   padding: 10px 16px;
   background: #b91c1c;
   color: #fff;
   font-size: 0.95rem;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.error-overlay > * + * {
+  margin-left: 12px;
 }
 
 .error-message {
