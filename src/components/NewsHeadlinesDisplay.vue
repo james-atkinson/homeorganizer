@@ -117,14 +117,14 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   max-width: 92%;
-  min-height: 6rem;
+  min-height: 4.8rem;
 }
 
 .headline-source {
   flex-shrink: 0;
-  font-size: 1.4rem;
+  font-size: 1.12rem;
   font-weight: 600;
   color: #ffffff;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
@@ -132,12 +132,12 @@ onUnmounted(() => {
 }
 
 .headline-title {
-  font-size: 2.5rem;
+  font-size: 2rem;
   line-height: 1.3;
   color: #ffffff;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
   text-align: center;
-  min-height: 6.5rem;
+  min-height: 5.2rem;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   line-clamp: 3;
