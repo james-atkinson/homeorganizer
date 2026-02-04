@@ -245,6 +245,17 @@ Your system is **Raspbian Stretch** (Debian 9). Node.js 18 requires glibc ≥ 2.
 - Verify the project path in the autostart file matches your install
 - Check system logs for errors
 
+### Chromium shows white or blank screen (Raspberry Pi)
+
+The launcher uses flags that often fix this, including `--ignore-certificate-errors` so HTTPS resources (e.g. Google Fonts) can load when the Pi’s SSL would otherwise fail. If the screen is still white:
+
+- **SSL errors in terminal:** The script now passes `--ignore-certificate-errors` and `--ignore-ssl-errors`. Ensure you’re using the updated `launch-display.sh`.
+- Set the Pi’s **time** correctly (wrong time breaks SSL): `sudo timedatectl set-ntp true` or set timezone in `sudo raspi-config`.
+- Ensure the server is running: the script waits up to 30s for port 3000. Check logs: `cat /tmp/homeorganizer-server.log`.
+- Confirm the app from another device: open `http://<pi-ip>:3000/` in a phone or PC browser.
+- Enable “wait for network at boot” in `sudo raspi-config` (Network Options).
+- Try starting manually: `./deploy/launch-display.sh` from the project directory after boot.
+
 ## License
 
 This project is for personal use.
