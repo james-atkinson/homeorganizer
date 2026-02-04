@@ -246,12 +246,26 @@ function processForecast(forecastData) {
   });
 }
 
+const indexPath = join(distPath, 'index.html');
+const hasBuild = existsSync(indexPath);
+
 // Serve the Vue app for all other routes (SPA fallback)
 app.get('*', (req, res) => {
-  res.sendFile(join(distPath, 'index.html'));
+  if (!hasBuild) {
+    res.status(503).set('Content-Type', 'text/html').send(
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Build required</title></head><body style="font-family:sans-serif;padding:2rem;max-width:40em;">' +
+      '<h1>Build required</h1><p>No built app found. From the project directory run:</p><pre>pnpm run build</pre>' +
+      '<p>Then restart the server.</p><p>If you just cloned the repo, run <code>./deploy/install.sh</code> first.</p></body></html>'
+    );
+    return;
+  }
+  res.sendFile(indexPath);
 });
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`API endpoints available at http://localhost:${PORT}/api`);
+  if (!hasBuild) {
+    console.warn('WARNING: dist/ has no index.html. Run "pnpm run build". Browsers will see a "Build required" page.');
+  }
 });

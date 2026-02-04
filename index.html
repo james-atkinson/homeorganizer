@@ -11,6 +11,27 @@
   </head>
   <body>
     <div id="app"></div>
+    <div id="load-error" style="display:none;font-family:sans-serif;padding:1.5rem;background:#1a1a1a;color:#fff;white-space:pre-wrap;margin:1rem;border-radius:8px;"></div>
+    <script>
+      (function() {
+        var el = document.getElementById('load-error');
+        function show(msg) {
+          if (el) { el.style.display = 'block'; el.textContent = msg; }
+        }
+        window.onerror = function(m, src, line, col, err) {
+          show('Error: ' + (err && err.message || m) + (src ? '\n at ' + src + ':' + line : ''));
+          return true;
+        };
+        window.addEventListener('unhandledrejection', function(e) {
+          show('Unhandled rejection: ' + (e.reason && (e.reason.message || e.reason) || String(e.reason)));
+        });
+        setTimeout(function() {
+          if (document.getElementById('app') && document.getElementById('app').children.length === 0 && !document.querySelector('#load-error').textContent) {
+            show('App did not load. Check that the server is serving the built files (dist/) and the browser console (F12) for errors.');
+          }
+        }, 8000);
+      })();
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
