@@ -131,9 +131,9 @@ onUnmounted(() => {
   font-weight: 600;
   color: #ffffff;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  padding-bottom: 2px;
+  padding-bottom: 1px;
 }
 
 .loading, .error {
@@ -148,14 +148,15 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .current-temp-block {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 0;
 }
 
 .temperature {
@@ -169,7 +170,7 @@ onUnmounted(() => {
 .feels-like {
   font-size: 1rem;
   color: rgba(255, 255, 255, 0.9);
-  margin-top: 4px;
+  margin-top: 2px;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
@@ -177,32 +178,34 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 2px;
 }
 
 .current-icon {
-  width: 5.8rem;
-  height: 5.8rem;
+  width: 7.2rem;
+  height: 7.2rem;
   object-fit: contain;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
 }
 
 .current-condition-desc {
-  font-size: 0.8rem;
+  font-size: 1.15rem;
   color: rgba(255, 255, 255, 0.95);
   text-transform: capitalize;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-  margin-top: 4px;
+  margin-top: 0;
   text-align: center;
+  line-height: 1.2;
 }
 
 .current-expected-precip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-  margin-top: 6px;
+  margin-top: 3px;
 }
 
 .current-expected-precip .md-icon {
@@ -226,8 +229,8 @@ onUnmounted(() => {
 
 .high-low {
   display: flex;
-  gap: 12px;
-  margin-top: 4px;
+  gap: 8px;
+  margin-top: 2px;
   font-size: 1rem;
   color: rgba(255, 255, 255, 0.95);
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
@@ -236,7 +239,7 @@ onUnmounted(() => {
 .sun-wind {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
   flex-wrap: wrap;
 }
 
@@ -282,9 +285,10 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 3.5rem 1fr 3.5rem 3.5rem 6rem;
   align-items: center;
-  padding: 2px 0;
+  padding: 0;
   column-gap: 10px;
   row-gap: 0;
+  line-height: 1.1;
   font-size: 1.05rem;
   line-height: 1.2;
   color: rgba(255, 255, 255, 0.95);

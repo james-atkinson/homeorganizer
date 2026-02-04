@@ -136,7 +136,7 @@ onUnmounted(() => {
 
 .section-title {
   flex-shrink: 0;
-  font-size: 1.25rem;
+  font-size: 1.56rem;
   font-weight: 600;
   color: #ffffff;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
@@ -146,13 +146,13 @@ onUnmounted(() => {
 }
 
 .upcoming-events.dense .section-title {
-  font-size: 1rem;
+  font-size: 1.25rem;
   margin-bottom: 4px;
   padding-bottom: 4px;
 }
 
 .upcoming-events.packed .section-title {
-  font-size: 0.9rem;
+  font-size: 1.12rem;
   margin-bottom: 2px;
   padding-bottom: 2px;
 }
@@ -161,7 +161,7 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.8);
   text-align: center;
   padding: 20px;
-  font-size: 1.2rem;
+  font-size: 1.5rem;
 }
 
 .events-list {
@@ -226,29 +226,29 @@ onUnmounted(() => {
 }
 
 .event-day {
-  font-size: 1.35rem;
+  font-size: 1.69rem;
   font-weight: 700;
   color: #ffffff;
   line-height: 1;
 }
 
 .upcoming-events.dense .event-day {
-  font-size: 1.1rem;
+  font-size: 1.38rem;
 }
 
 .upcoming-events.packed .event-day {
-  font-size: 0.95rem;
+  font-size: 1.19rem;
 }
 
 .event-month {
-  font-size: 0.7rem;
+  font-size: 0.88rem;
   color: rgba(255, 255, 255, 0.9);
   text-transform: uppercase;
   margin-top: 2px;
 }
 
 .upcoming-events.packed .event-month {
-  font-size: 0.6rem;
+  font-size: 0.75rem;
 }
 
 .event-details {
@@ -262,7 +262,7 @@ onUnmounted(() => {
 }
 
 .event-countdown {
-  font-size: 0.75rem;
+  font-size: 0.94rem;
   color: rgba(255, 255, 255, 0.75);
   margin-bottom: 1px;
   flex-shrink: 0;
@@ -273,16 +273,16 @@ onUnmounted(() => {
 }
 
 .upcoming-events.dense .event-countdown {
-  font-size: 0.65rem;
+  font-size: 0.81rem;
   margin-bottom: 0;
 }
 
 .upcoming-events.packed .event-countdown {
-  font-size: 0.6rem;
+  font-size: 0.75rem;
 }
 
 .event-title {
-  font-size: 0.95rem;
+  font-size: 1.19rem;
   font-weight: 600;
   line-height: 1.25;
   color: #ffffff;
@@ -297,19 +297,19 @@ onUnmounted(() => {
 }
 
 .upcoming-events.dense .event-title {
-  font-size: 0.85rem;
+  font-size: 1.06rem;
   line-height: 1.2;
   min-height: 1.2em;
 }
 
 .upcoming-events.packed .event-title {
-  font-size: 0.75rem;
+  font-size: 0.94rem;
   line-height: 1.2;
   min-height: 1.2em;
 }
 
 .event-time {
-  font-size: 0.8rem;
+  font-size: 1rem;
   color: rgba(255, 255, 255, 0.9);
   flex-shrink: 0;
   overflow: hidden;
@@ -319,15 +319,15 @@ onUnmounted(() => {
 }
 
 .upcoming-events.dense .event-time {
-  font-size: 0.7rem;
+  font-size: 0.88rem;
 }
 
 .upcoming-events.packed .event-time {
-  font-size: 0.6rem;
+  font-size: 0.75rem;
 }
 
 .event-location {
-  font-size: 0.75rem;
+  font-size: 0.94rem;
   color: rgba(255, 255, 255, 0.7);
   font-style: italic;
   overflow: hidden;
@@ -337,6 +337,6 @@ onUnmounted(() => {
 }
 
 .upcoming-events.packed .event-location {
-  font-size: 0.55rem;
+  font-size: 0.69rem;
 }
 </style>
