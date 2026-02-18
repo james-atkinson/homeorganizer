@@ -229,16 +229,21 @@ function processForecast(forecastData) {
   });
   return Object.values(dailyData).slice(0, 7).map(day => {
     const popMax = day.pops?.length ? Math.round(Math.max(...day.pops) * 100) : null;
-    const totalMm = (day.rainMm || 0) + (day.snowMm || 0);
-    const precipitation = totalMm > 0 ? Math.round(totalMm * 10) / 10 : null;
+    const rainMm = (day.rainMm || 0) > 0 ? Math.round(day.rainMm * 10) / 10 : null;
+    const snowMm = (day.snowMm || 0) > 0 ? Math.round(day.snowMm * 10) / 10 : null;
     const mid = Math.floor(day.conditions.length / 2);
+    const condition = day.conditions[mid];
+    // Precipitation in correct unit: snow → cm (from mm liquid equiv), rain/other → mm
+    const precipitation = condition === 'Snow' && snowMm != null
+      ? Math.round((snowMm / 10) * 10) / 10
+      : rainMm != null ? rainMm : null;
     return {
       date: day.date,
       dayName: day.date.toLocaleDateString('en-US', { weekday: 'short' }),
       high: Math.round(Math.max(...day.temps)),
       low: Math.round(Math.min(...day.temps)),
-      condition: day.conditions[mid],
-      description: day.descriptions[mid] ?? day.conditions[mid],
+      condition,
+      description: day.descriptions[mid] ?? condition,
       icon: day.icons[mid],
       pop: popMax,
       precipitation

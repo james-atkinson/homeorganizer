@@ -13,9 +13,16 @@
             <span>Low {{ weather.current.low }}°</span>
           </div>
           <div v-if="weather.current.expectedPrecip && (weather.current.expectedPrecip.precipitation != null || weather.current.expectedPrecip.pop != null)" class="current-expected-precip">
-            <span class="md-icon" aria-hidden="true">water_drop</span>
-            <template v-if="weather.current.expectedPrecip.precipitation != null && weather.current.expectedPrecip.precipitation > 0">{{ weather.current.expectedPrecip.precipitation }} mm</template>
-            <template v-else>{{ weather.current.expectedPrecip.pop != null ? weather.current.expectedPrecip.pop : 0 }}%</template>
+            <template v-if="weather.current.condition === 'Snow'">
+              <span class="md-icon" aria-hidden="true">ac_unit</span>
+              <template v-if="weather.current.expectedPrecip.precipitation != null && weather.current.expectedPrecip.precipitation > 0">{{ weather.current.expectedPrecip.precipitation }} cm</template>
+              <template v-else>{{ weather.current.expectedPrecip.pop != null ? weather.current.expectedPrecip.pop : 0 }}%</template>
+            </template>
+            <template v-else>
+              <span class="md-icon" aria-hidden="true">water_drop</span>
+              <template v-if="weather.current.expectedPrecip.precipitation != null && weather.current.expectedPrecip.precipitation > 0">{{ weather.current.expectedPrecip.precipitation }} mm</template>
+              <template v-else>{{ weather.current.expectedPrecip.pop != null ? weather.current.expectedPrecip.pop : 0 }}%</template>
+            </template>
           </div>
         </div>
         <div class="current-condition-block">
@@ -48,10 +55,17 @@
           <div class="forecast-high forecast-cell"><span class="md-icon forecast-temp-icon" aria-hidden="true">arrow_upward</span> {{ day.high }}°</div>
           <div class="forecast-low forecast-cell"><span class="md-icon forecast-temp-icon" aria-hidden="true">arrow_downward</span> {{ day.low }}°</div>
           <div class="forecast-precip forecast-cell" title="Precipitation">
-            <template v-if="day.pop != null || day.precipitation != null">
-              <span class="md-icon forecast-temp-icon" aria-hidden="true">water_drop</span>
-              <template v-if="day.precipitation != null && day.precipitation > 0">{{ day.precipitation }} mm</template>
-              <template v-else>{{ day.pop != null ? day.pop : 0 }}%</template>
+            <template v-if="day.pop != null || (day.precipitation != null && day.precipitation > 0)">
+              <template v-if="day.condition === 'Snow'">
+                <span class="md-icon forecast-temp-icon" aria-hidden="true">ac_unit</span>
+                <template v-if="day.precipitation != null && day.precipitation > 0">{{ day.precipitation }} cm</template>
+                <template v-else>{{ day.pop != null ? day.pop : 0 }}%</template>
+              </template>
+              <template v-else>
+                <span class="md-icon forecast-temp-icon" aria-hidden="true">water_drop</span>
+                <template v-if="day.precipitation != null && day.precipitation > 0">{{ day.precipitation }} mm</template>
+                <template v-else>{{ day.pop != null ? day.pop : 0 }}%</template>
+              </template>
             </template>
           </div>
         </div>
