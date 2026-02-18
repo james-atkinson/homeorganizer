@@ -14,33 +14,29 @@
           </div>
           <div v-if="weather.current.expectedPrecip && (weather.current.expectedPrecip.precipitation != null || weather.current.expectedPrecip.pop != null)" class="current-expected-precip">
             <template v-if="weather.current.condition === 'Snow'">
-              <span class="md-icon" aria-hidden="true">ac_unit</span>
+              <i class="wi wi-snowflake-cold precip-icon" aria-hidden="true"></i>
               <template v-if="weather.current.expectedPrecip.precipitation != null && weather.current.expectedPrecip.precipitation > 0">{{ weather.current.expectedPrecip.precipitation }} cm</template>
               <template v-else>{{ weather.current.expectedPrecip.pop != null ? weather.current.expectedPrecip.pop : 0 }}%</template>
             </template>
             <template v-else>
-              <span class="md-icon" aria-hidden="true">water_drop</span>
+              <i class="wi wi-rain precip-icon" aria-hidden="true"></i>
               <template v-if="weather.current.expectedPrecip.precipitation != null && weather.current.expectedPrecip.precipitation > 0">{{ weather.current.expectedPrecip.precipitation }} mm</template>
               <template v-else>{{ weather.current.expectedPrecip.pop != null ? weather.current.expectedPrecip.pop : 0 }}%</template>
             </template>
           </div>
         </div>
         <div class="current-condition-block">
-          <img
-            :src="weatherIconUrl(weather.current.icon)"
-            :alt="weather.current.description"
-            class="current-icon"
-          />
+          <i :class="weatherIconClass(weather.current.icon)" class="current-icon" aria-hidden="true"></i>
           <div class="current-condition-desc">{{ weather.current.description }}</div>
         </div>
       </div>
       <!-- Bottom row: sunrise, sunset, humidity, wind -->
       <div class="current-bottom">
         <div class="sun-wind">
-          <span class="labeled"><span class="md-icon" aria-hidden="true">wb_twilight</span> {{ formatSunTime(weather.current.sunrise) }}</span>
-          <span class="labeled"><span class="md-icon md-icon-sunset" aria-hidden="true">wb_twilight</span> {{ formatSunTime(weather.current.sunset) }}</span>
-          <span class="labeled"><span class="md-icon" aria-hidden="true">opacity</span> {{ weather.current.humidity }}%</span>
-          <span class="labeled"><span class="md-icon" aria-hidden="true">air</span> {{ weather.current.windSpeed }} m/s {{ windDirection(weather.current.windDeg) }}</span>
+          <span class="labeled"><i class="wi wi-sunrise sun-wind-icon" aria-hidden="true"></i> {{ formatSunTime(weather.current.sunrise) }}</span>
+          <span class="labeled"><i class="wi wi-sunset sun-wind-icon" aria-hidden="true"></i> {{ formatSunTime(weather.current.sunset) }}</span>
+          <span class="labeled"><i class="wi wi-humidity sun-wind-icon" aria-hidden="true"></i> {{ weather.current.humidity }}%</span>
+          <span class="labeled"><i class="wi wi-strong-wind sun-wind-icon" aria-hidden="true"></i> {{ weather.current.windSpeed }} m/s {{ windDirection(weather.current.windDeg) }}</span>
         </div>
       </div>
       <!-- 7-day forecast -->
@@ -49,20 +45,20 @@
         <div v-for="day in weather.forecast" :key="day.date" class="forecast-day">
           <div class="forecast-day-name">{{ day.dayName }}</div>
           <div class="forecast-condition">
-            <img :src="weatherIconUrl(day.icon)" :alt="day.description" class="forecast-icon" />
+            <i :class="weatherIconClass(day.icon)" class="forecast-icon" aria-hidden="true"></i>
             <span class="forecast-condition-text">{{ day.description }}</span>
           </div>
-          <div class="forecast-high forecast-cell"><span class="md-icon forecast-temp-icon" aria-hidden="true">arrow_upward</span> {{ day.high }}°</div>
-          <div class="forecast-low forecast-cell"><span class="md-icon forecast-temp-icon" aria-hidden="true">arrow_downward</span> {{ day.low }}°</div>
+          <div class="forecast-high forecast-cell"><i class="wi wi-direction-up forecast-temp-icon" aria-hidden="true"></i> {{ day.high }}°</div>
+          <div class="forecast-low forecast-cell"><i class="wi wi-direction-down forecast-temp-icon" aria-hidden="true"></i> {{ day.low }}°</div>
           <div class="forecast-precip forecast-cell" title="Precipitation">
             <template v-if="day.pop != null || (day.precipitation != null && day.precipitation > 0)">
               <template v-if="day.condition === 'Snow'">
-                <span class="md-icon forecast-temp-icon" aria-hidden="true">ac_unit</span>
+                <i class="wi wi-snowflake-cold forecast-temp-icon" aria-hidden="true"></i>
                 <template v-if="day.precipitation != null && day.precipitation > 0">{{ day.precipitation }} cm</template>
                 <template v-else>{{ day.pop != null ? day.pop : 0 }}%</template>
               </template>
               <template v-else>
-                <span class="md-icon forecast-temp-icon" aria-hidden="true">water_drop</span>
+                <i class="wi wi-rain forecast-temp-icon" aria-hidden="true"></i>
                 <template v-if="day.precipitation != null && day.precipitation > 0">{{ day.precipitation }} mm</template>
                 <template v-else>{{ day.pop != null ? day.pop : 0 }}%</template>
               </template>
@@ -84,11 +80,18 @@ const weather = ref(null);
 const loading = ref(true);
 const locationDisplay = ref('Location');
 
-const OWM_ICON_BASE = 'https://openweathermap.org/img/wn';
+// OWM icon code (e.g. "01d", "13n") → Open Weather Map condition ID for Weather Icons (wi-owm-day-XXX / wi-owm-night-XXX)
+// See https://openweathermap.org/weather-conditions and Weather Icons api-list (Open Weather Map set)
+const OWM_ICON_TO_CONDITION_ID = {
+  '01': 800, '02': 801, '03': 802, '04': 803, '09': 520, '10': 501, '11': 211, '12': 502, '13': 601, '50': 701
+};
 
-function weatherIconUrl(icon) {
-  if (!icon) return `${OWM_ICON_BASE}/01d@2x.png`;
-  return `${OWM_ICON_BASE}/${icon}@2x.png`;
+function weatherIconClass(icon) {
+  if (!icon || icon.length < 3) return 'wi wi-owm-day-800';
+  const group = icon.slice(0, 2);
+  const dayOrNight = icon.charAt(2) === 'n' ? 'night' : 'day';
+  const conditionId = OWM_ICON_TO_CONDITION_ID[group] ?? 800;
+  return `wi wi-owm-${dayOrNight}-${conditionId}`;
 }
 
 function formatSunTime(timestamp) {
@@ -195,16 +198,17 @@ onUnmounted(() => {
   align-items: center;
 }
 .current-condition-block > * + * {
-  margin-top: 2px;
+  margin-top: 6px;
 }
 
 .current-icon {
-  width: 7.2rem;
-  height: 7.2rem;
-  object-fit: contain;
+  font-size: 7.2rem;
+  line-height: 1;
+  color: #ffffff;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+  -webkit-font-smoothing: antialiased;
+  margin: 4px 0;
 }
-
 .current-condition-desc {
   font-size: 1.15rem;
   color: rgba(255, 255, 255, 0.95);
@@ -224,17 +228,16 @@ onUnmounted(() => {
   margin-top: 3px;
 }
 .current-expected-precip > * + * {
-  margin-left: 4px;
+  margin-left: 8px;
 }
 
-.current-expected-precip .md-icon {
-  font-family: 'Material Icons';
-  font-weight: 400;
+.current-expected-precip .precip-icon {
   font-size: 1rem;
   line-height: 1;
   vertical-align: middle;
   color: inherit;
   -webkit-font-smoothing: antialiased;
+  margin-right: 2px;
 }
 
 .current-bottom {
@@ -263,7 +266,7 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 .sun-wind > * + * {
-  margin-left: 20px;
+  margin-left: 24px;
 }
 
 .sun-wind .labeled {
@@ -271,21 +274,16 @@ onUnmounted(() => {
   align-items: center;
 }
 .sun-wind .labeled > * + * {
-  margin-left: 4px;
+  margin-left: 8px;
 }
 
-.sun-wind .md-icon {
-  font-family: 'Material Icons';
-  font-weight: 400;
+.sun-wind .sun-wind-icon {
   font-size: 1.15rem;
   line-height: 1;
   vertical-align: middle;
   color: inherit;
   -webkit-font-smoothing: antialiased;
-}
-
-.sun-wind .md-icon-sunset {
-  transform: rotate(180deg);
+  margin-right: 4px;
 }
 
 .forecast {
@@ -329,15 +327,19 @@ onUnmounted(() => {
   min-width: 0;
 }
 .forecast-condition > * + * {
-  margin-left: 8px;
+  margin-left: 12px;
 }
 
 .forecast-icon {
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
+  font-size: 1.8rem;
+  line-height: 1;
   flex-shrink: 0;
+  width: 1.2em;
+  text-align: center;
+  color: #ffffff;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+  -webkit-font-smoothing: antialiased;
+  margin-right: 4px;
 }
 
 .forecast-condition-text {
@@ -354,7 +356,7 @@ onUnmounted(() => {
   min-width: 0;
 }
 .forecast-cell > * + * {
-  margin-left: 4px;
+  margin-left: 8px;
 }
 
 .forecast-precip {
@@ -362,12 +364,11 @@ onUnmounted(() => {
 }
 
 .forecast-temp-icon {
-  font-family: 'Material Icons';
-  font-weight: 400;
   font-size: 1.2rem;
   line-height: 1;
   vertical-align: middle;
   color: inherit;
   -webkit-font-smoothing: antialiased;
+  margin-right: 2px;
 }
 </style>
