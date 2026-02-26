@@ -182,7 +182,7 @@ onUnmounted(() => {
   grid-template-columns: repeat(7, 1fr);
   grid-template-rows: auto;
   grid-auto-rows: minmax(0, 1fr);
-  gap: 0;
+  grid-gap: 0;
   min-height: 0;
   align-self: stretch;
   background: rgba(0, 0, 0, 0.3);

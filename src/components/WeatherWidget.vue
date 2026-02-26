@@ -309,8 +309,7 @@ onUnmounted(() => {
   grid-template-columns: 3.5rem 1fr 3.5rem 3.5rem 6rem;
   align-items: center;
   padding: 0;
-  column-gap: 10px;
-  row-gap: 0;
+  grid-gap: 0 10px;
   line-height: 1.1;
   font-size: 1.05rem;
   line-height: 1.2;

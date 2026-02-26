@@ -172,18 +172,17 @@ onUnmounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 .events-list > * + * {
-  margin-top: 0;
+  margin-top: 8px;
 }
 
-.upcoming-events.dense .events-list {
-  gap: 6px;
+.upcoming-events.dense .events-list > * + * {
+  margin-top: 6px;
 }
 
-.upcoming-events.packed .events-list {
-  gap: 4px;
+.upcoming-events.packed .events-list > * + * {
+  margin-top: 4px;
 }
 
 .event-item {
@@ -228,7 +227,6 @@ onUnmounted(() => {
   justify-content: center;
   min-width: 36px;
   padding: 2px;
-  gap: 0;
 }
 
 .upcoming-events.dense .event-date {
@@ -296,10 +294,12 @@ onUnmounted(() => {
 .upcoming-events.packed .event-top-row {
   flex-direction: row;
   align-items: baseline;
-  gap: 6px;
 }
-.upcoming-events.packed .event-top-row {
-  gap: 4px;
+.upcoming-events.dense .event-top-row > * + * {
+  margin-left: 6px;
+}
+.upcoming-events.packed .event-top-row > * + * {
+  margin-left: 4px;
 }
 
 .event-countdown {
