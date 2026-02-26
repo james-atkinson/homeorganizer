@@ -196,13 +196,14 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding-top: 20px;
 }
 .current-condition-block > * + * {
   margin-top: 6px;
 }
 
 .current-icon {
-  font-size: 5rem;
+  font-size: 3.5rem;
   line-height: 1;
   color: #ffffff;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
