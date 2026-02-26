@@ -202,7 +202,7 @@ onUnmounted(() => {
 }
 
 .current-icon {
-  font-size: 7.2rem;
+  font-size: 5rem;
   line-height: 1;
   color: #ffffff;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));

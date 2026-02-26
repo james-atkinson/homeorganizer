@@ -13,9 +13,11 @@
           <div class="event-month">{{ formatMonth(event.start) }}</div>
         </div>
         <div class="event-details">
-          <div class="event-countdown">{{ timeUntil(event) }}</div>
-          <div class="event-title">{{ event.summary }}</div>
-          <div class="event-time">{{ formatTime(event) }}</div>
+          <div class="event-top-row">
+            <div class="event-countdown">{{ timeUntil(event) }}</div>
+            <div class="event-title">{{ event.summary }}</div>
+            <div class="event-time">{{ formatTime(event) }}</div>
+          </div>
           <div v-if="event.location" class="event-location">{{ event.location }}</div>
         </div>
       </div>
@@ -32,8 +34,8 @@ const loading = ref(true);
 
 const densityClass = computed(() => {
   const n = events.value.length;
-  if (n >= 12) return 'packed';
-  if (n >= 7) return 'dense';
+  if (n >= 8) return 'packed';
+  if (n >= 4) return 'dense';
   return '';
 });
 
@@ -170,17 +172,18 @@ onUnmounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 .events-list > * + * {
-  margin-top: 12px;
+  margin-top: 0;
 }
 
-.upcoming-events.dense .events-list > * + * {
-  margin-top: 8px;
+.upcoming-events.dense .events-list {
+  gap: 6px;
 }
 
-.upcoming-events.packed .events-list > * + * {
-  margin-top: 6px;
+.upcoming-events.packed .events-list {
+  gap: 4px;
 }
 
 .event-item {
@@ -197,9 +200,14 @@ onUnmounted(() => {
   margin-left: 6px;
 }
 
+.upcoming-events.dense .event-item,
+.upcoming-events.packed .event-item {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
 .upcoming-events.dense .event-item {
   padding: 3px 4px;
-  min-height: 2.85em;
 }
 .upcoming-events.dense .event-item > * + * {
   margin-left: 5px;
@@ -207,7 +215,6 @@ onUnmounted(() => {
 
 .upcoming-events.packed .event-item {
   padding: 2px 3px;
-  min-height: 2.6em;
 }
 .upcoming-events.packed .event-item > * + * {
   margin-left: 4px;
@@ -221,31 +228,34 @@ onUnmounted(() => {
   justify-content: center;
   min-width: 36px;
   padding: 2px;
+  gap: 0;
 }
 
 .upcoming-events.dense .event-date {
-  min-width: 32px;
-  padding: 1px;
+  min-width: 28px;
+  padding: 1px 2px;
 }
 
 .upcoming-events.packed .event-date {
-  min-width: 28px;
-  padding: 1px;
+  min-width: 24px;
+  padding: 1px 2px;
 }
 
 .event-day {
   font-size: 1.69rem;
   font-weight: 700;
   color: #ffffff;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .upcoming-events.dense .event-day {
-  font-size: 1.38rem;
+  font-size: 1.05rem;
+  line-height: 1.1;
 }
 
 .upcoming-events.packed .event-day {
-  font-size: 1.19rem;
+  font-size: 0.9rem;
+  line-height: 1.1;
 }
 
 .event-month {
@@ -253,10 +263,17 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.9);
   text-transform: uppercase;
   margin-top: 2px;
+  line-height: 1.1;
+}
+
+.upcoming-events.dense .event-month {
+  font-size: 0.6rem;
+  margin-top: 1px;
 }
 
 .upcoming-events.packed .event-month {
-  font-size: 0.75rem;
+  font-size: 0.52rem;
+  margin-top: 1px;
 }
 
 .event-details {
@@ -267,6 +284,22 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+
+.event-top-row {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.upcoming-events.dense .event-top-row,
+.upcoming-events.packed .event-top-row {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+}
+.upcoming-events.packed .event-top-row {
+  gap: 4px;
 }
 
 .event-countdown {
@@ -281,12 +314,14 @@ onUnmounted(() => {
 }
 
 .upcoming-events.dense .event-countdown {
-  font-size: 0.81rem;
+  font-size: 0.68rem;
   margin-bottom: 0;
+  line-height: 1.15;
 }
 
 .upcoming-events.packed .event-countdown {
-  font-size: 0.75rem;
+  font-size: 0.58rem;
+  line-height: 1.1;
 }
 
 .event-title {
@@ -305,15 +340,35 @@ onUnmounted(() => {
 }
 
 .upcoming-events.dense .event-title {
-  font-size: 1.06rem;
-  line-height: 1.2;
-  min-height: 1.2em;
+  font-size: 0.82rem;
+  line-height: 1.15;
+  min-height: 1.15em;
+  -webkit-line-clamp: 2;
+  margin-bottom: 0;
+}
+
+.upcoming-events.dense .event-top-row .event-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  display: block;
+  -webkit-line-clamp: unset;
 }
 
 .upcoming-events.packed .event-title {
-  font-size: 0.94rem;
-  line-height: 1.2;
-  min-height: 1.2em;
+  font-size: 0.7rem;
+  line-height: 1.1;
+  min-height: 1.1em;
+  -webkit-line-clamp: 1;
+  margin-bottom: 0;
+}
+
+.upcoming-events.packed .event-top-row .event-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  display: block;
+  -webkit-line-clamp: unset;
 }
 
 .event-time {
@@ -327,11 +382,26 @@ onUnmounted(() => {
 }
 
 .upcoming-events.dense .event-time {
-  font-size: 0.88rem;
+  font-size: 0.7rem;
+  line-height: 1.15;
+}
+
+.upcoming-events.dense .event-top-row .event-time {
+  flex-shrink: 0;
 }
 
 .upcoming-events.packed .event-time {
-  font-size: 0.75rem;
+  font-size: 0.58rem;
+  line-height: 1.1;
+}
+
+.upcoming-events.packed .event-top-row .event-time {
+  flex-shrink: 0;
+}
+
+.upcoming-events.dense .event-top-row .event-countdown,
+.upcoming-events.packed .event-top-row .event-countdown {
+  flex-shrink: 0;
 }
 
 .event-location {
@@ -344,7 +414,11 @@ onUnmounted(() => {
   line-height: 1.2;
 }
 
+.upcoming-events.dense .event-location {
+  font-size: 0.62rem;
+}
+
 .upcoming-events.packed .event-location {
-  font-size: 0.69rem;
+  font-size: 0.52rem;
 }
 </style>

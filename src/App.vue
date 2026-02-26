@@ -77,8 +77,7 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 .left-column > * + * {
   margin-top: 1px;
@@ -90,23 +89,5 @@ body {
   display: flex;
   flex-direction: column;
   padding-right: 24px;
-}
-
-/* Scrollbar styling */
-.left-column::-webkit-scrollbar {
-  width: 8px;
-}
-
-.left-column::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.left-column::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-}
-
-.left-column::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35);
 }
 </style>
