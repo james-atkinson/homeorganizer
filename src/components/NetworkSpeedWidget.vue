@@ -100,7 +100,10 @@ onUnmounted(() => {
 .speed-chart-body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  margin-top: 4px;
+}
+
+.speed-chart-body > * + * {
   margin-top: 4px;
 }
 
@@ -127,17 +130,23 @@ onUnmounted(() => {
 
 .speed-legend {
   display: flex;
-  gap: 12px;
   flex-wrap: wrap;
   font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.95);
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
+.speed-legend > * + * {
+  margin-left: 14px;
+}
+
 .speed-legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+}
+
+.speed-legend-item > * + * {
+  margin-left: 6px;
 }
 
 .legend-dot {
