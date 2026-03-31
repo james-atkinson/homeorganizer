@@ -39,10 +39,10 @@
           <span class="labeled"><i class="wi wi-strong-wind sun-wind-icon" aria-hidden="true"></i> {{ weather.current.windSpeed }} m/s {{ windDirection(weather.current.windDeg) }}</span>
         </div>
       </div>
-      <!-- 7-day forecast -->
+      <!-- 5-day forecast -->
       <div class="forecast">
-        <h3 class="forecast-header">7 Day Forecast</h3>
-        <div v-for="day in weather.forecast" :key="day.date" class="forecast-day">
+        <h3 class="forecast-header">5 Day Forecast</h3>
+        <div v-for="day in weather.forecast.slice(0, 5)" :key="day.date" class="forecast-day">
           <div class="forecast-day-name">{{ day.dayName }}</div>
           <div class="forecast-condition">
             <i :class="weatherIconClass(day.icon)" class="forecast-icon" aria-hidden="true"></i>

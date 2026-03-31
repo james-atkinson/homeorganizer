@@ -1,9 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import Database from 'better-sqlite3';
+import speedTest from 'speedtest-net';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,6 +16,45 @@ const PORT = process.env.PORT || 3000;
 const projectRoot = join(__dirname, '..');
 const configPath = join(projectRoot, 'config.json');
 const publicConfigPath = join(projectRoot, 'public', 'config.json');
+const dataDir = join(projectRoot, 'data');
+const speedTestDbPath = join(dataDir, 'speedtests.sqlite');
+const SPEED_TEST_INTERVAL_MS = 60 * 60 * 1000;
+const SPEED_TEST_RETENTION_DAYS = 60;
+const SPEED_TEST_MAX_QUERY_DAYS = 60;
+
+mkdirSync(dataDir, { recursive: true });
+
+const speedDb = new Database(speedTestDbPath);
+speedDb.pragma('journal_mode = WAL');
+speedDb.exec(`
+  CREATE TABLE IF NOT EXISTS speed_tests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tested_at INTEGER NOT NULL,
+    download_mbps REAL NOT NULL,
+    upload_mbps REAL NOT NULL,
+    ping_ms REAL NOT NULL,
+    jitter_ms REAL,
+    server_name TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_speed_tests_tested_at ON speed_tests(tested_at);
+`);
+
+const insertSpeedTestStmt = speedDb.prepare(`
+  INSERT INTO speed_tests (tested_at, download_mbps, upload_mbps, ping_ms, jitter_ms, server_name)
+  VALUES (@tested_at, @download_mbps, @upload_mbps, @ping_ms, @jitter_ms, @server_name)
+`);
+
+const cleanupSpeedTestStmt = speedDb.prepare(`
+  DELETE FROM speed_tests
+  WHERE tested_at < ?
+`);
+
+const selectSpeedTestsStmt = speedDb.prepare(`
+  SELECT tested_at, download_mbps, upload_mbps, ping_ms
+  FROM speed_tests
+  WHERE tested_at >= ?
+  ORDER BY tested_at ASC
+`);
 
 function loadServerConfig() {
   const path = existsSync(configPath) ? configPath : publicConfigPath;
@@ -38,6 +79,114 @@ function getSanitizedConfig() {
     out.calendar = {};
   }
   return out;
+}
+
+function toMbps(bitsPerSecond) {
+  return Math.round((bitsPerSecond / 1_000_000) * 100) / 100;
+}
+
+async function runFallbackSpeedProbe() {
+  const downloadBytes = 20 * 1024 * 1024;
+  const uploadBytes = 5 * 1024 * 1024;
+  const uploadBuffer = Buffer.alloc(uploadBytes, 'a');
+
+  const pingStart = Date.now();
+  await axios.get('https://speed.cloudflare.com/__down?bytes=1', { timeout: 10000 });
+  const pingMs = Date.now() - pingStart;
+
+  const downloadStart = Date.now();
+  await axios.get(`https://speed.cloudflare.com/__down?bytes=${downloadBytes}`, {
+    responseType: 'arraybuffer',
+    timeout: 30000
+  });
+  const downloadDurationSec = Math.max((Date.now() - downloadStart) / 1000, 0.001);
+  const downloadBitsPerSecond = (downloadBytes * 8) / downloadDurationSec;
+
+  const uploadStart = Date.now();
+  await axios.post('https://speed.cloudflare.com/__up', uploadBuffer, {
+    headers: { 'Content-Type': 'application/octet-stream' },
+    timeout: 30000
+  });
+  const uploadDurationSec = Math.max((Date.now() - uploadStart) / 1000, 0.001);
+  const uploadBitsPerSecond = (uploadBytes * 8) / uploadDurationSec;
+
+  return {
+    downloadBitsPerSecond,
+    uploadBitsPerSecond,
+    pingMs,
+    jitterMs: null,
+    serverName: 'Cloudflare probe fallback'
+  };
+}
+
+function pruneOldSpeedTests() {
+  const cutoffMs = Date.now() - (SPEED_TEST_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  cleanupSpeedTestStmt.run(cutoffMs);
+}
+
+async function runSpeedTestAndStore() {
+  const testedAt = Date.now();
+  let downloadBitsPerSecond = 0;
+  let uploadBitsPerSecond = 0;
+  let pingMs = 0;
+  let jitterMs = null;
+  let serverName = null;
+
+  try {
+    const result = await speedTest({
+      acceptLicense: true,
+      acceptGdpr: true
+    });
+    downloadBitsPerSecond = (result.download?.bandwidth ?? 0) * 8;
+    uploadBitsPerSecond = (result.upload?.bandwidth ?? 0) * 8;
+    pingMs = result.ping?.latency ?? 0;
+    jitterMs = result.ping?.jitter ?? null;
+    serverName = result.server?.name ?? 'Speedtest.net';
+  } catch (error) {
+    console.warn(`speedtest-net failed, using fallback probe: ${error.message}`);
+    const fallback = await runFallbackSpeedProbe();
+    downloadBitsPerSecond = fallback.downloadBitsPerSecond;
+    uploadBitsPerSecond = fallback.uploadBitsPerSecond;
+    pingMs = fallback.pingMs;
+    jitterMs = fallback.jitterMs;
+    serverName = fallback.serverName;
+  }
+
+  insertSpeedTestStmt.run({
+    tested_at: testedAt,
+    download_mbps: toMbps(downloadBitsPerSecond),
+    upload_mbps: toMbps(uploadBitsPerSecond),
+    ping_ms: Math.round(pingMs * 100) / 100,
+    jitter_ms: jitterMs != null ? Math.round(jitterMs * 100) / 100 : null,
+    server_name: serverName
+  });
+
+  pruneOldSpeedTests();
+}
+
+let speedTestInProgress = false;
+
+async function runScheduledSpeedTest() {
+  if (speedTestInProgress) {
+    return;
+  }
+
+  speedTestInProgress = true;
+  try {
+    await runSpeedTestAndStore();
+    console.log('Hourly speed test completed.');
+  } catch (error) {
+    console.error('Hourly speed test failed:', error.message);
+  } finally {
+    speedTestInProgress = false;
+  }
+}
+
+function startSpeedTestScheduler() {
+  pruneOldSpeedTests();
+  // Run once at startup so the chart has fresh data right away.
+  runScheduledSpeedTest();
+  setInterval(runScheduledSpeedTest, SPEED_TEST_INTERVAL_MS);
 }
 
 // Block direct access to config file (secrets must not be publicly fetchable)
@@ -210,6 +359,34 @@ app.get('/api/weather', async (req, res) => {
   }
 });
 
+app.get('/api/speedtests', (req, res) => {
+  try {
+    const rawDays = req.query.days;
+    const parsedDays = Number.parseInt(String(rawDays ?? '7'), 10);
+    const days = Number.isFinite(parsedDays) ? parsedDays : 7;
+
+    if (days < 1 || days > SPEED_TEST_MAX_QUERY_DAYS) {
+      return res.status(400).json({ error: `days must be between 1 and ${SPEED_TEST_MAX_QUERY_DAYS}` });
+    }
+
+    const sinceMs = Date.now() - (days * 24 * 60 * 60 * 1000);
+    const rows = selectSpeedTestsStmt.all(sinceMs);
+
+    res.json({
+      days,
+      points: rows.map(row => ({
+        testedAt: row.tested_at,
+        downloadMbps: row.download_mbps,
+        uploadMbps: row.upload_mbps,
+        pingMs: row.ping_ms
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching speed tests:', error);
+    res.status(500).json({ error: 'Failed to load speed tests' });
+  }
+});
+
 function processForecast(forecastData) {
   if (!forecastData?.list) return [];
   const dailyData = {};
@@ -270,6 +447,7 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`API endpoints available at http://localhost:${PORT}/api`);
+  startSpeedTestScheduler();
   if (!hasBuild) {
     console.warn('WARNING: dist/ has no index.html. Run "pnpm run build". Browsers will see a "Build required" page.');
   }

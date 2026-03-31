@@ -8,6 +8,7 @@
           <DateTimeDisplay />
           <UpcomingEventsList />
           <WeatherWidget />
+          <NetworkSpeedWidget />
         </div>
         <div class="right-column">
           <CalendarView />
@@ -25,6 +26,7 @@ import CalendarView from './components/CalendarView.vue';
 import DateTimeDisplay from './components/DateTimeDisplay.vue';
 import UpcomingEventsList from './components/UpcomingEventsList.vue';
 import WeatherWidget from './components/WeatherWidget.vue';
+import NetworkSpeedWidget from './components/NetworkSpeedWidget.vue';
 import NewsHeadlinesDisplay from './components/NewsHeadlinesDisplay.vue';
 </script>
 

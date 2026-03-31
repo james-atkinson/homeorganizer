@@ -30,3 +30,6 @@ dist-ssr
 config.json
 public/config.json
 credentials.json
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
