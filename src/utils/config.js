@@ -22,7 +22,11 @@ export async function loadConfig() {
 function getDefaultConfig() {
   return {
     calendar: {
-      icsUrl: ""  // Set in config.json; server uses it for /api/calendar
+      icsUrl: "", // Set in config.json; server uses it for /api/calendar
+      /** ISO country code for `date-holidays` (default Canada; override e.g. `"US"` if needed) */
+      holidayCountry: "CA",
+      /** Optional province/territory for regional holidays (e.g. `ON`, `BC`, `AB`, `QC`) */
+      holidayState: "AB"
     },
     weather: {
       apiKey: "",

@@ -5,29 +5,38 @@
     </div>
     <div class="calendar-grid">
       <div class="weekday-header">
-        <div v-for="day in weekdays" :key="day" class="weekday">{{ day }}</div>
+        <div v-for="d in weekdays" :key="d" class="weekday">{{ d }}</div>
       </div>
       <div class="days-grid">
         <div
           v-for="(day, index) in calendarDays"
           :key="index"
           class="day-cell"
-          :class="{
-            'other-month': !day.isCurrentMonth,
-            'today': day.isToday
-          }"
+          :class="dayCellClassList(day)"
         >
-          <div class="day-number">{{ day.date }}</div>
-          <div v-if="day.events.length" class="day-events">
-            <div
-              v-for="(ev, i) in day.events"
-              :key="ev.uid || i"
-              class="day-event"
-              :style="{ '--event-bg': eventColor(ev) }"
-              :title="ev.summary + (ev.isAllDay ? '' : ' ' + formatEventTime(ev))"
-            >
-              <div class="event-time">{{ ev.isAllDay ? 'All day' : formatEventTime(ev) }}</div>
-              <div class="event-summary">{{ ev.summary }}</div>
+          <div
+            v-if="day.isToday && day.todayHighlight !== 'default'"
+            class="today-ornament-layer"
+            aria-hidden="true"
+          >
+            <span class="today-corner today-corner--tl"></span>
+            <span class="today-corner today-corner--tr"></span>
+            <span class="today-corner today-corner--bl"></span>
+            <span class="today-corner today-corner--br"></span>
+          </div>
+          <div class="day-cell-inner">
+            <div class="day-number">{{ day.date }}</div>
+            <div v-if="day.events.length" class="day-events">
+              <div
+                v-for="(ev, i) in day.events"
+                :key="ev.uid || i"
+                class="day-event"
+                :style="{ '--event-bg': eventColor(ev) }"
+                :title="ev.summary + (ev.isAllDay ? '' : ' ' + formatEventTime(ev))"
+              >
+                <div class="event-time">{{ ev.isAllDay ? 'All day' : formatEventTime(ev) }}</div>
+                <div class="event-summary">{{ ev.summary }}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -39,12 +48,27 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { getEventsForMonth } from '../services/calendar.js';
+import {
+  resolveTodayHighlight,
+  sanitizeTodayHighlightTheme
+} from '../utils/calendarTodayHighlight.js';
 
 const currentDate = ref(new Date());
 const events = ref([]);
 const loading = ref(true);
 
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function dayCellClassList(day) {
+  const list = {
+    'other-month': !day.isCurrentMonth,
+    today: day.isToday
+  };
+  if (day.isToday && day.todayHighlight) {
+    list[`today--${day.todayHighlight}`] = true;
+  }
+  return list;
+}
 
 function formatEventTime(event) {
   const start = event.start;
@@ -72,23 +96,20 @@ const monthYear = computed(() => {
 const calendarDays = computed(() => {
   const year = currentDate.value.getFullYear();
   const month = currentDate.value.getMonth();
-  
-  // Get first day of month and last day of month
+
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-  
-  // Get first day of week for the month
+
   const startDate = new Date(firstDay);
   startDate.setDate(startDate.getDate() - startDate.getDay());
-  
-  // Get last day to show (end of last week)
+
   const endDate = new Date(lastDay);
   endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
-  
+
   const days = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const current = new Date(startDate);
   while (current <= endDate) {
     const currentDay = new Date(current);
@@ -109,21 +130,28 @@ const calendarDays = computed(() => {
         if (a.isAllDay && b.isAllDay) return 0;
         return a.start - b.start;
       });
-    
-    const isToday = current.getTime() === today.getTime();
+
+    const isToday = currentDay.getTime() === today.getTime();
     const isCurrentMonth = current.getMonth() === month;
-    
+
+    let todayHighlight = null;
+    if (isToday) {
+      const raw = resolveTodayHighlight(currentDay, dayEvents);
+      todayHighlight = sanitizeTodayHighlightTheme(raw);
+    }
+
     days.push({
       date: current.getDate(),
       isCurrentMonth,
       isToday,
+      todayHighlight,
       eventCount: dayEvents.length,
       events: dayEvents
     });
-    
+
     current.setDate(current.getDate() + 1);
   }
-  
+
   return days;
 });
 
@@ -145,7 +173,7 @@ let refreshInterval = null;
 
 onMounted(() => {
   loadEvents();
-  refreshInterval = setInterval(loadEvents, 5 * 60 * 1000); // Refresh every 5 minutes
+  refreshInterval = setInterval(loadEvents, 5 * 60 * 1000);
 });
 
 onUnmounted(() => {
@@ -209,10 +237,6 @@ onUnmounted(() => {
 
 .day-cell {
   padding: 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
   position: relative;
   cursor: default;
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -225,8 +249,549 @@ onUnmounted(() => {
   opacity: 0.5;
 }
 
+.day-cell-inner {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  min-height: 0;
+  flex: 1;
+  height: 100%;
+}
+
+.today-ornament-layer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.today-corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  z-index: 1;
+}
+
+/* Sit on / just outside the cell edge so art stays on the border, not over the date. */
+.day-cell.today:not(.today--default) .today-corner--tl {
+  top: -8px;
+  left: -8px;
+}
+
+.day-cell.today:not(.today--default) .today-corner--tr {
+  top: -8px;
+  right: -8px;
+}
+
+.day-cell.today:not(.today--default) .today-corner--bl {
+  bottom: -8px;
+  left: -8px;
+}
+
+.day-cell.today:not(.today--default) .today-corner--br {
+  bottom: -8px;
+  right: -8px;
+}
+
+.today-corner::before {
+  display: block;
+  width: 22px;
+  height: 22px;
+  line-height: 22px;
+  text-align: center;
+  font-size: 16px;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.85);
+}
+
+/* ----- Today base + themes ----- */
 .day-cell.today {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.42);
+  border-width: 2px;
+  box-sizing: border-box;
+  overflow: visible;
+  z-index: 2;
+}
+
+.day-cell.today--default {
+  border-color: #e6c200;
+}
+
+.day-cell.today--valentines {
+  border-color: #e91e63;
+  box-shadow: inset 0 0 0 1px rgba(255, 128, 171, 0.4), 0 0 10px rgba(233, 30, 99, 0.5);
+}
+
+.day-cell.today--valentines .today-ornament-layer::before {
+  content: '💕';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--valentines .today-ornament-layer::after {
+  content: '✨';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--valentines .today-corner::before {
+  content: '';
+  background: url('../assets/calendar-today/heart.svg') center / contain no-repeat;
+}
+
+.day-cell.today--christmas {
+  border-color: #2e7d32;
+  box-shadow: inset 0 0 0 1px rgba(198, 40, 40, 0.45), 0 0 10px rgba(46, 125, 50, 0.55);
+}
+
+.day-cell.today--christmas .today-ornament-layer::before {
+  content: '🎄';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--christmas .today-ornament-layer::after {
+  content: '🎁';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--christmas .today-corner::before {
+  content: '';
+  background: url('../assets/calendar-today/bauble.svg') center / contain no-repeat;
+}
+
+.day-cell.today--holiday {
+  border-color: #ffa726;
+  box-shadow: 0 0 8px rgba(255, 167, 38, 0.5);
+}
+
+.day-cell.today--holiday .today-ornament-layer::before {
+  content: '🎉';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--holiday .today-ornament-layer::after {
+  content: '🎊';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--holiday .today-corner--tl::before {
+  content: '✨';
+}
+
+.day-cell.today--holiday .today-corner--tr::before {
+  content: '🎊';
+}
+
+.day-cell.today--holiday .today-corner--bl::before {
+  content: '🎉';
+}
+
+.day-cell.today--holiday .today-corner--br::before {
+  content: '✨';
+}
+
+.day-cell.today--birthday {
+  border-color: #ec407a;
+  box-shadow: 0 0 9px rgba(236, 64, 122, 0.55);
+}
+
+.day-cell.today--birthday .today-corner--tl::before,
+.day-cell.today--birthday .today-corner--br::before {
+  content: '🎈';
+}
+
+.day-cell.today--birthday .today-corner--tr::before,
+.day-cell.today--birthday .today-corner--bl::before {
+  content: '🎂';
+}
+
+.day-cell.today--vacation {
+  border-color: #26c6da;
+  box-shadow: 0 0 8px rgba(38, 198, 218, 0.5);
+}
+
+.day-cell.today--vacation .today-ornament-layer::before {
+  content: '🌴';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--vacation .today-ornament-layer::after {
+  content: '✈️';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--vacation .today-corner::before {
+  content: '';
+  background: url('../assets/calendar-today/sun.svg') center / contain no-repeat;
+}
+
+.day-cell.today--reminder {
+  border-color: #ffb300;
+  box-shadow: 0 0 8px rgba(255, 179, 0, 0.55);
+}
+
+.day-cell.today--reminder .today-ornament-layer::before {
+  content: '⏰';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--reminder .today-ornament-layer::after {
+  content: '📋';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--reminder .today-corner--tl::before,
+.day-cell.today--reminder .today-corner--tr::before {
+  content: '🔔';
+}
+
+.day-cell.today--reminder .today-corner--bl::before,
+.day-cell.today--reminder .today-corner--br::before {
+  content: '📌';
+}
+
+.day-cell.today--dental {
+  border-color: #4dd0e1;
+  box-shadow: 0 0 8px rgba(77, 208, 225, 0.5);
+}
+
+.day-cell.today--dental .today-ornament-layer::before {
+  content: '🦷';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--dental .today-ornament-layer::after {
+  content: '✨';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--dental .today-corner--tl::before,
+.day-cell.today--dental .today-corner--tr::before,
+.day-cell.today--dental .today-corner--bl::before,
+.day-cell.today--dental .today-corner--br::before {
+  content: '🦷';
+}
+
+.day-cell.today--wellness {
+  border-color: #42a5f5;
+  box-shadow: 0 0 8px rgba(66, 165, 245, 0.45);
+}
+
+.day-cell.today--wellness .today-ornament-layer::before {
+  content: '💬';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--wellness .today-ornament-layer::after {
+  content: '💊';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--wellness .today-corner::before {
+  content: '';
+  background: url('../assets/calendar-today/cross-care.svg') center / contain no-repeat;
+}
+
+.day-cell.today--halloween {
+  border-color: #ff6f00;
+  box-shadow: 0 0 9px rgba(255, 111, 0, 0.55);
+}
+
+.day-cell.today--halloween .today-corner--tl::before,
+.day-cell.today--halloween .today-corner--tr::before {
+  content: '🎃';
+}
+
+.day-cell.today--halloween .today-corner--bl::before,
+.day-cell.today--halloween .today-corner--br::before {
+  content: '👻';
+}
+
+.day-cell.today--halloween .today-ornament-layer::before {
+  content: '🕷️';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--halloween .today-ornament-layer::after {
+  content: '🕸️';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--independence {
+  border-color: #1565c0;
+  box-shadow: 0 0 10px rgba(21, 101, 192, 0.55);
+}
+
+.day-cell.today--independence .today-corner--tl::before,
+.day-cell.today--independence .today-corner--br::before {
+  content: '🎆';
+}
+
+.day-cell.today--independence .today-corner--tr::before,
+.day-cell.today--independence .today-corner--bl::before {
+  content: '⭐';
+}
+
+.day-cell.today--independence .today-ornament-layer::before {
+  content: '🚩';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--independence .today-ornament-layer::after {
+  content: '🎆';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--easter {
+  border-color: #ab47bc;
+  box-shadow: 0 0 8px rgba(171, 71, 188, 0.5);
+}
+
+.day-cell.today--easter .today-corner--tl::before,
+.day-cell.today--easter .today-corner--tr::before {
+  content: '🐰';
+}
+
+.day-cell.today--easter .today-corner--bl::before,
+.day-cell.today--easter .today-corner--br::before {
+  content: '🥚';
+}
+
+.day-cell.today--easter .today-ornament-layer::before {
+  content: '🌸';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--easter .today-ornament-layer::after {
+  content: '🌸';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--thanksgiving {
+  border-color: #8d6e63;
+  box-shadow: 0 0 8px rgba(141, 110, 99, 0.5);
+}
+
+.day-cell.today--thanksgiving .today-corner--tl::before,
+.day-cell.today--thanksgiving .today-corner--br::before {
+  content: '🦃';
+}
+
+.day-cell.today--thanksgiving .today-corner--tr::before,
+.day-cell.today--thanksgiving .today-corner--bl::before {
+  content: '🍁';
+}
+
+.day-cell.today--thanksgiving .today-ornament-layer::before {
+  content: '🧺';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.day-cell.today--thanksgiving .today-ornament-layer::after {
+  content: '🦃';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  margin-top: -8px;
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
 }
 
 .day-number {
@@ -246,6 +811,7 @@ onUnmounted(() => {
   flex-direction: column;
   min-height: 0;
 }
+
 .day-events > * + * {
   margin-top: 4px;
 }

@@ -76,7 +76,11 @@ function getSanitizedConfig() {
     delete out.weather.apiKey;
   }
   if (out.calendar) {
-    out.calendar = {};
+    const cal = out.calendar;
+    out.calendar = {
+      ...(cal.holidayCountry != null && { holidayCountry: cal.holidayCountry }),
+      ...(cal.holidayState != null && { holidayState: cal.holidayState })
+    };
   }
   return out;
 }

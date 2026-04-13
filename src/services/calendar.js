@@ -3,6 +3,24 @@ import { setFatalError, clearFatalError, fatalError } from '../utils/fatalError.
 
 const CALENDAR_ERROR_MSG = 'Calendar failed to load';
 
+/** @param {*} vevent ical.js VEVENT component */
+function parseEventCategories(vevent) {
+  const tokens = new Set();
+  const props = vevent.getAllProperties('categories');
+  for (let i = 0; i < props.length; i++) {
+    const vals = props[i].getValues();
+    for (let j = 0; j < vals.length; j++) {
+      String(vals[j])
+        .split(',')
+        .forEach((piece) => {
+          const t = piece.trim().toLowerCase();
+          if (t) tokens.add(t);
+        });
+    }
+  }
+  return Array.from(tokens);
+}
+
 let cachedEvents = [];
 let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -31,7 +49,7 @@ export async function fetchCalendarEvents() {
       const event = new ICAL.Event(vevent);
       const start = event.startDate.toJSDate();
       const end = event.endDate.toJSDate();
-      
+
       return {
         uid: event.uid,
         summary: event.summary || 'No Title',
@@ -39,7 +57,8 @@ export async function fetchCalendarEvents() {
         end: end,
         location: event.location || '',
         description: event.description || '',
-        isAllDay: event.startDate.isDate
+        isAllDay: event.startDate.isDate,
+        categories: parseEventCategories(vevent)
       };
     });
 
