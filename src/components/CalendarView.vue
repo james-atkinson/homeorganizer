@@ -14,28 +14,30 @@
           class="day-cell"
           :class="dayCellClassList(day)"
         >
-          <div
-            v-if="day.isToday && day.todayHighlight !== 'default'"
-            class="today-ornament-layer"
-            aria-hidden="true"
-          >
-            <span class="today-corner today-corner--tl"></span>
-            <span class="today-corner today-corner--tr"></span>
-            <span class="today-corner today-corner--bl"></span>
-            <span class="today-corner today-corner--br"></span>
-          </div>
-          <div class="day-cell-inner">
-            <div class="day-number">{{ day.date }}</div>
-            <div v-if="day.events.length" class="day-events">
-              <div
-                v-for="(ev, i) in day.events"
-                :key="ev.uid || i"
-                class="day-event"
-                :style="{ '--event-bg': eventColor(ev) }"
-                :title="ev.summary + (ev.isAllDay ? '' : ' ' + formatEventTime(ev))"
-              >
-                <div class="event-time">{{ ev.isAllDay ? 'All day' : formatEventTime(ev) }}</div>
-                <div class="event-summary">{{ ev.summary }}</div>
+          <div class="day-cell-stack">
+            <div
+              v-if="day.isToday && day.todayHighlight !== 'default'"
+              class="today-ornament-layer"
+              aria-hidden="true"
+            >
+              <span class="today-corner today-corner--tl"></span>
+              <span class="today-corner today-corner--tr"></span>
+              <span class="today-corner today-corner--bl"></span>
+              <span class="today-corner today-corner--br"></span>
+            </div>
+            <div class="day-cell-inner">
+              <div class="day-number">{{ day.date }}</div>
+              <div v-if="day.events.length" class="day-events">
+                <div
+                  v-for="(ev, i) in day.events"
+                  :key="ev.uid || i"
+                  class="day-event"
+                  :style="{ '--event-bg': eventColor(ev) }"
+                  :title="ev.summary + (ev.isAllDay ? '' : ' ' + formatEventTime(ev))"
+                >
+                  <div class="event-time">{{ ev.isAllDay ? 'All day' : formatEventTime(ev) }}</div>
+                  <div class="event-summary">{{ ev.summary }}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -236,6 +238,8 @@ onUnmounted(() => {
 }
 
 .day-cell {
+  display: flex;
+  flex-direction: column;
   padding: 4px;
   position: relative;
   cursor: default;
@@ -243,6 +247,14 @@ onUnmounted(() => {
   border-radius: 0;
   min-height: 0;
   overflow: hidden;
+}
+
+.day-cell-stack {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .day-cell.other-month {
@@ -257,8 +269,7 @@ onUnmounted(() => {
   align-items: stretch;
   justify-content: flex-start;
   min-height: 0;
-  flex: 1;
-  height: 100%;
+  flex: 1 1 auto;
 }
 
 .today-ornament-layer {
