@@ -15,6 +15,13 @@
           :class="dayCellClassList(day)"
         >
           <div class="day-cell-stack">
+            <img
+              v-if="day.isToday && todayWatermarkIcon(day.todayHighlight)"
+              class="today-watermark"
+              :src="todayWatermarkIcon(day.todayHighlight)"
+              alt=""
+              aria-hidden="true"
+            />
             <div class="day-cell-inner">
               <div class="day-number">{{ day.date }}</div>
               <div v-if="day.events.length" class="day-events">
@@ -44,6 +51,38 @@ import {
   resolveTodayHighlight,
   sanitizeTodayHighlightTheme
 } from '../utils/calendarTodayHighlight.js';
+import heartIcon from '../assets/calendar-today/heart.svg';
+import baubleIcon from '../assets/calendar-today/bauble.svg';
+import sparkleIcon from '../assets/calendar-today/sparkle.svg';
+import cakeIcon from '../assets/calendar-today/cake.svg';
+import sunIcon from '../assets/calendar-today/sun.svg';
+import bellIcon from '../assets/calendar-today/bell.svg';
+import toothIcon from '../assets/calendar-today/tooth.svg';
+import crossCareIcon from '../assets/calendar-today/cross-care.svg';
+import pumpkinIcon from '../assets/calendar-today/pumpkin.svg';
+import starIcon from '../assets/calendar-today/star.svg';
+import eggIcon from '../assets/calendar-today/egg.svg';
+import leafIcon from '../assets/calendar-today/leaf.svg';
+
+const TODAY_ICON_URLS = {
+  valentines: heartIcon,
+  christmas: baubleIcon,
+  holiday: sparkleIcon,
+  birthday: cakeIcon,
+  vacation: sunIcon,
+  reminder: bellIcon,
+  dental: toothIcon,
+  wellness: crossCareIcon,
+  halloween: pumpkinIcon,
+  independence: starIcon,
+  easter: eggIcon,
+  thanksgiving: leafIcon
+};
+
+function todayWatermarkIcon(theme) {
+  if (!theme || theme === 'default') return null;
+  return TODAY_ICON_URLS[theme] || null;
+}
 
 const currentDate = ref(new Date());
 const events = ref([]);
@@ -262,6 +301,18 @@ onUnmounted(() => {
   flex: 1 1 auto;
 }
 
+.today-watermark {
+  position: absolute;
+  top: 22.5%;
+  left: 22.5%;
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* ----- Today base + themes ----- */
 .day-cell.today {
   background: rgba(0, 0, 0, 0.42);
@@ -269,91 +320,66 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-.day-cell.today:not(.today--default)::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.18;
-  background: var(--today-icon) center / 55% no-repeat;
-}
-
 .day-cell.today--default {
   border-color: #e6c200;
 }
 
 .day-cell.today--valentines {
-  --today-icon: url('../assets/calendar-today/heart.svg');
   border-color: #e91e63;
   box-shadow: inset 0 0 0 1px rgba(255, 128, 171, 0.4), 0 0 10px rgba(233, 30, 99, 0.5);
 }
 
 .day-cell.today--christmas {
-  --today-icon: url('../assets/calendar-today/bauble.svg');
   border-color: #2e7d32;
   box-shadow: inset 0 0 0 1px rgba(198, 40, 40, 0.45), 0 0 10px rgba(46, 125, 50, 0.55);
 }
 
 .day-cell.today--holiday {
-  --today-icon: url('../assets/calendar-today/sparkle.svg');
   border-color: #ffa726;
   box-shadow: 0 0 8px rgba(255, 167, 38, 0.5);
 }
 
 .day-cell.today--birthday {
-  --today-icon: url('../assets/calendar-today/cake.svg');
   border-color: #ec407a;
   box-shadow: 0 0 9px rgba(236, 64, 122, 0.55);
 }
 
 .day-cell.today--vacation {
-  --today-icon: url('../assets/calendar-today/sun.svg');
   border-color: #26c6da;
   box-shadow: 0 0 8px rgba(38, 198, 218, 0.5);
 }
 
 .day-cell.today--reminder {
-  --today-icon: url('../assets/calendar-today/bell.svg');
   border-color: #ffb300;
   box-shadow: 0 0 8px rgba(255, 179, 0, 0.55);
 }
 
 .day-cell.today--dental {
-  --today-icon: url('../assets/calendar-today/tooth.svg');
   border-color: #4dd0e1;
   box-shadow: 0 0 8px rgba(77, 208, 225, 0.5);
 }
 
 .day-cell.today--wellness {
-  --today-icon: url('../assets/calendar-today/cross-care.svg');
   border-color: #42a5f5;
   box-shadow: 0 0 8px rgba(66, 165, 245, 0.45);
 }
 
 .day-cell.today--halloween {
-  --today-icon: url('../assets/calendar-today/pumpkin.svg');
   border-color: #ff6f00;
   box-shadow: 0 0 9px rgba(255, 111, 0, 0.55);
 }
 
 .day-cell.today--independence {
-  --today-icon: url('../assets/calendar-today/star.svg');
   border-color: #1565c0;
   box-shadow: 0 0 10px rgba(21, 101, 192, 0.55);
 }
 
 .day-cell.today--easter {
-  --today-icon: url('../assets/calendar-today/egg.svg');
   border-color: #ab47bc;
   box-shadow: 0 0 8px rgba(171, 71, 188, 0.5);
 }
 
 .day-cell.today--thanksgiving {
-  --today-icon: url('../assets/calendar-today/leaf.svg');
   border-color: #8d6e63;
   box-shadow: 0 0 8px rgba(141, 110, 99, 0.5);
 }
