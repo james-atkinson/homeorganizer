@@ -17,44 +17,83 @@ const projectRoot = join(__dirname, '..');
 const configPath = join(projectRoot, 'config.json');
 const publicConfigPath = join(projectRoot, 'public', 'config.json');
 const dataDir = join(projectRoot, 'data');
-const speedTestDbPath = join(dataDir, 'speedtests.sqlite');
+const networkDbPath = join(dataDir, 'speedtests.sqlite');
 const SPEED_TEST_INTERVAL_MS = 60 * 60 * 1000;
-const SPEED_TEST_RETENTION_DAYS = 60;
-const SPEED_TEST_MAX_QUERY_DAYS = 60;
+const PING_INTERVAL_MS = 3 * 60 * 1000;
+const CONNECTIVITY_PING_TIMEOUT_MS = 10000;
 
 mkdirSync(dataDir, { recursive: true });
 
-const speedDb = new Database(speedTestDbPath);
-speedDb.pragma('journal_mode = WAL');
-speedDb.exec(`
-  CREATE TABLE IF NOT EXISTS speed_tests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tested_at INTEGER NOT NULL,
-    download_mbps REAL NOT NULL,
-    upload_mbps REAL NOT NULL,
-    ping_ms REAL NOT NULL,
-    jitter_ms REAL,
+const networkDb = new Database(networkDbPath);
+networkDb.pragma('journal_mode = WAL');
+networkDb.exec(`
+  CREATE TABLE IF NOT EXISTS network_state (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    online INTEGER NOT NULL DEFAULT 0,
+    last_ping_at INTEGER,
+    last_ping_ms REAL,
+    speed_tested_at INTEGER,
+    download_mbps REAL,
+    upload_mbps REAL,
+    speed_ping_ms REAL,
     server_name TEXT
   );
-  CREATE INDEX IF NOT EXISTS idx_speed_tests_tested_at ON speed_tests(tested_at);
 `);
 
-const insertSpeedTestStmt = speedDb.prepare(`
-  INSERT INTO speed_tests (tested_at, download_mbps, upload_mbps, ping_ms, jitter_ms, server_name)
-  VALUES (@tested_at, @download_mbps, @upload_mbps, @ping_ms, @jitter_ms, @server_name)
+function migrateLegacySpeedTests() {
+  const legacyTable = networkDb.prepare(`
+    SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'speed_tests'
+  `).get();
+  if (!legacyTable) return;
+
+  const latest = networkDb.prepare(`
+    SELECT tested_at, download_mbps, upload_mbps, ping_ms, server_name
+    FROM speed_tests
+    ORDER BY tested_at DESC
+    LIMIT 1
+  `).get();
+
+  if (latest) {
+    upsertSpeedTestStmt.run({
+      speed_tested_at: latest.tested_at,
+      download_mbps: latest.download_mbps,
+      upload_mbps: latest.upload_mbps,
+      speed_ping_ms: latest.ping_ms,
+      server_name: latest.server_name
+    });
+  }
+
+  networkDb.exec('DROP TABLE IF EXISTS speed_tests');
+  networkDb.exec('DROP INDEX IF EXISTS idx_speed_tests_tested_at');
+}
+
+const upsertSpeedTestStmt = networkDb.prepare(`
+  INSERT INTO network_state (id, speed_tested_at, download_mbps, upload_mbps, speed_ping_ms, server_name)
+  VALUES (1, @speed_tested_at, @download_mbps, @upload_mbps, @speed_ping_ms, @server_name)
+  ON CONFLICT(id) DO UPDATE SET
+    speed_tested_at = excluded.speed_tested_at,
+    download_mbps = excluded.download_mbps,
+    upload_mbps = excluded.upload_mbps,
+    speed_ping_ms = excluded.speed_ping_ms,
+    server_name = excluded.server_name
 `);
 
-const cleanupSpeedTestStmt = speedDb.prepare(`
-  DELETE FROM speed_tests
-  WHERE tested_at < ?
+const upsertPingStatusStmt = networkDb.prepare(`
+  INSERT INTO network_state (id, online, last_ping_at, last_ping_ms)
+  VALUES (1, @online, @last_ping_at, @last_ping_ms)
+  ON CONFLICT(id) DO UPDATE SET
+    online = excluded.online,
+    last_ping_at = excluded.last_ping_at,
+    last_ping_ms = excluded.last_ping_ms
 `);
 
-const selectSpeedTestsStmt = speedDb.prepare(`
-  SELECT tested_at, download_mbps, upload_mbps, ping_ms
-  FROM speed_tests
-  WHERE tested_at >= ?
-  ORDER BY tested_at ASC
+const selectNetworkStateStmt = networkDb.prepare(`
+  SELECT online, last_ping_at, last_ping_ms, speed_tested_at, download_mbps, upload_mbps, speed_ping_ms, server_name
+  FROM network_state
+  WHERE id = 1
 `);
+
+migrateLegacySpeedTests();
 
 function loadServerConfig() {
   const path = existsSync(configPath) ? configPath : publicConfigPath;
@@ -123,9 +162,26 @@ async function runFallbackSpeedProbe() {
   };
 }
 
-function pruneOldSpeedTests() {
-  const cutoffMs = Date.now() - (SPEED_TEST_RETENTION_DAYS * 24 * 60 * 60 * 1000);
-  cleanupSpeedTestStmt.run(cutoffMs);
+async function runConnectivityPing() {
+  const lastPingAt = Date.now();
+  try {
+    const pingStart = Date.now();
+    await axios.get('https://speed.cloudflare.com/__down?bytes=1', {
+      timeout: CONNECTIVITY_PING_TIMEOUT_MS
+    });
+    const pingMs = Math.round((Date.now() - pingStart) * 100) / 100;
+    upsertPingStatusStmt.run({
+      online: 1,
+      last_ping_at: lastPingAt,
+      last_ping_ms: pingMs
+    });
+  } catch (error) {
+    upsertPingStatusStmt.run({
+      online: 0,
+      last_ping_at: lastPingAt,
+      last_ping_ms: null
+    });
+  }
 }
 
 async function runSpeedTestAndStore() {
@@ -156,19 +212,17 @@ async function runSpeedTestAndStore() {
     serverName = fallback.serverName;
   }
 
-  insertSpeedTestStmt.run({
-    tested_at: testedAt,
+  upsertSpeedTestStmt.run({
+    speed_tested_at: testedAt,
     download_mbps: toMbps(downloadBitsPerSecond),
     upload_mbps: toMbps(uploadBitsPerSecond),
-    ping_ms: Math.round(pingMs * 100) / 100,
-    jitter_ms: jitterMs != null ? Math.round(jitterMs * 100) / 100 : null,
+    speed_ping_ms: Math.round(pingMs * 100) / 100,
     server_name: serverName
   });
-
-  pruneOldSpeedTests();
 }
 
 let speedTestInProgress = false;
+let pingInProgress = false;
 
 async function runScheduledSpeedTest() {
   if (speedTestInProgress) {
@@ -187,10 +241,57 @@ async function runScheduledSpeedTest() {
 }
 
 function startSpeedTestScheduler() {
-  pruneOldSpeedTests();
-  // Run once at startup so the chart has fresh data right away.
   runScheduledSpeedTest();
   setInterval(runScheduledSpeedTest, SPEED_TEST_INTERVAL_MS);
+}
+
+async function runScheduledConnectivityPing() {
+  if (pingInProgress) {
+    return;
+  }
+
+  pingInProgress = true;
+  try {
+    await runConnectivityPing();
+  } catch (error) {
+    console.error('Connectivity ping failed:', error.message);
+  } finally {
+    pingInProgress = false;
+  }
+}
+
+function startConnectivityScheduler() {
+  runScheduledConnectivityPing();
+  setInterval(runScheduledConnectivityPing, PING_INTERVAL_MS);
+}
+
+function getNetworkStatusPayload() {
+  const row = selectNetworkStateStmt.get();
+  if (!row) {
+    return {
+      online: false,
+      lastPingAt: null,
+      pingMs: null,
+      speedTest: null
+    };
+  }
+
+  const speedTest = row.speed_tested_at != null
+    ? {
+        testedAt: row.speed_tested_at,
+        downloadMbps: row.download_mbps,
+        uploadMbps: row.upload_mbps,
+        pingMs: row.speed_ping_ms,
+        serverName: row.server_name
+      }
+    : null;
+
+  return {
+    online: row.online === 1,
+    lastPingAt: row.last_ping_at ?? null,
+    pingMs: row.last_ping_ms ?? null,
+    speedTest
+  };
 }
 
 // Block direct access to config file (secrets must not be publicly fetchable)
@@ -363,31 +464,12 @@ app.get('/api/weather', async (req, res) => {
   }
 });
 
-app.get('/api/speedtests', (req, res) => {
+app.get('/api/network-status', (req, res) => {
   try {
-    const rawDays = req.query.days;
-    const parsedDays = Number.parseInt(String(rawDays ?? '7'), 10);
-    const days = Number.isFinite(parsedDays) ? parsedDays : 7;
-
-    if (days < 1 || days > SPEED_TEST_MAX_QUERY_DAYS) {
-      return res.status(400).json({ error: `days must be between 1 and ${SPEED_TEST_MAX_QUERY_DAYS}` });
-    }
-
-    const sinceMs = Date.now() - (days * 24 * 60 * 60 * 1000);
-    const rows = selectSpeedTestsStmt.all(sinceMs);
-
-    res.json({
-      days,
-      points: rows.map(row => ({
-        testedAt: row.tested_at,
-        downloadMbps: row.download_mbps,
-        uploadMbps: row.upload_mbps,
-        pingMs: row.ping_ms
-      }))
-    });
+    res.json(getNetworkStatusPayload());
   } catch (error) {
-    console.error('Error fetching speed tests:', error);
-    res.status(500).json({ error: 'Failed to load speed tests' });
+    console.error('Error fetching network status:', error);
+    res.status(500).json({ error: 'Failed to load network status' });
   }
 });
 
@@ -452,6 +534,7 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`API endpoints available at http://localhost:${PORT}/api`);
   startSpeedTestScheduler();
+  startConnectivityScheduler();
   if (!hasBuild) {
     console.warn('WARNING: dist/ has no index.html. Run "pnpm run build". Browsers will see a "Build required" page.');
   }
