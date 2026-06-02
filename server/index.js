@@ -5,7 +5,13 @@ import { readFileSync, existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import Database from 'better-sqlite3';
-import speedTest from 'speedtest-net';
+import {
+  assertSafeOutboundUrl,
+  getConfiguredRssUrls,
+  isAllowedRssFeedUrl,
+  sanitizeRedditSort,
+  sanitizeRedditSubreddit
+} from './urlSafety.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -128,7 +134,7 @@ function toMbps(bitsPerSecond) {
   return Math.round((bitsPerSecond / 1_000_000) * 100) / 100;
 }
 
-async function runFallbackSpeedProbe() {
+async function runSpeedProbe() {
   const downloadBytes = 20 * 1024 * 1024;
   const uploadBytes = 5 * 1024 * 1024;
   const uploadBuffer = Buffer.alloc(uploadBytes, 'a');
@@ -158,7 +164,7 @@ async function runFallbackSpeedProbe() {
     uploadBitsPerSecond,
     pingMs,
     jitterMs: null,
-    serverName: 'Cloudflare probe fallback'
+    serverName: 'Cloudflare probe'
   };
 }
 
@@ -186,39 +192,18 @@ async function runConnectivityPing() {
 
 async function runSpeedTestAndStore() {
   const testedAt = Date.now();
-  let downloadBitsPerSecond = 0;
-  let uploadBitsPerSecond = 0;
-  let pingMs = 0;
-  let jitterMs = null;
-  let serverName = null;
-
   try {
-    const result = await speedTest({
-      acceptLicense: true,
-      acceptGdpr: true
+    const result = await runSpeedProbe();
+    upsertSpeedTestStmt.run({
+      speed_tested_at: testedAt,
+      download_mbps: toMbps(result.downloadBitsPerSecond),
+      upload_mbps: toMbps(result.uploadBitsPerSecond),
+      speed_ping_ms: Math.round(result.pingMs * 100) / 100,
+      server_name: result.serverName
     });
-    downloadBitsPerSecond = (result.download?.bandwidth ?? 0) * 8;
-    uploadBitsPerSecond = (result.upload?.bandwidth ?? 0) * 8;
-    pingMs = result.ping?.latency ?? 0;
-    jitterMs = result.ping?.jitter ?? null;
-    serverName = result.server?.name ?? 'Speedtest.net';
   } catch (error) {
-    console.warn(`speedtest-net failed, using fallback probe: ${error.message}`);
-    const fallback = await runFallbackSpeedProbe();
-    downloadBitsPerSecond = fallback.downloadBitsPerSecond;
-    uploadBitsPerSecond = fallback.uploadBitsPerSecond;
-    pingMs = fallback.pingMs;
-    jitterMs = fallback.jitterMs;
-    serverName = fallback.serverName;
+    console.error('Speed test failed:', error.message);
   }
-
-  upsertSpeedTestStmt.run({
-    speed_tested_at: testedAt,
-    download_mbps: toMbps(downloadBitsPerSecond),
-    upload_mbps: toMbps(uploadBitsPerSecond),
-    speed_ping_ms: Math.round(pingMs * 100) / 100,
-    server_name: serverName
-  });
 }
 
 let speedTestInProgress = false;
@@ -333,8 +318,8 @@ const REDDIT_HEADERS = {
 
 app.get('/api/reddit/:subreddit', async (req, res) => {
   try {
-    const { subreddit } = req.params;
-    const sort = req.query.sort || 'hot';
+    const subreddit = sanitizeRedditSubreddit(req.params.subreddit);
+    const sort = sanitizeRedditSort(req.query.sort);
     
     const basePath = `/r/${subreddit}/${sort}.json`;
     const hosts = ['https://www.reddit.com', 'https://old.reddit.com'];
@@ -362,6 +347,9 @@ app.get('/api/reddit/:subreddit', async (req, res) => {
     const message = lastError?.statusText || 'Failed to fetch Reddit data';
     res.status(status).json({ error: message });
   } catch (error) {
+    if (error.message === 'Invalid subreddit' || error.message === 'Invalid sort') {
+      return res.status(400).json({ error: error.message });
+    }
     console.error('Error fetching Reddit data:', error);
     const status = error.response?.status || 500;
     const message = error.response?.statusText || 'Failed to fetch Reddit data';
@@ -373,11 +361,19 @@ app.get('/api/reddit/:subreddit', async (req, res) => {
 app.get('/api/rss', async (req, res) => {
   try {
     const url = req.query.url;
-    
+
     if (!url) {
       return res.status(400).json({ error: 'URL parameter is required' });
     }
-    
+
+    const config = loadServerConfig();
+    const allowedUrls = getConfiguredRssUrls(config);
+    if (!isAllowedRssFeedUrl(url, allowedUrls)) {
+      return res.status(403).json({ error: 'RSS feed URL not allowed' });
+    }
+
+    assertSafeOutboundUrl(url);
+
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0'
@@ -398,14 +394,14 @@ app.get('/api/rss', async (req, res) => {
 // Calendar .ics proxy endpoint (uses server config when url not provided)
 app.get('/api/calendar', async (req, res) => {
   try {
-    let url = req.query.url;
-    if (!url) {
-      const config = loadServerConfig();
-      url = config?.calendar?.icsUrl;
-    }
+    const config = loadServerConfig();
+    const url = config?.calendar?.icsUrl;
     if (!url) {
       return res.status(400).json({ error: 'Calendar URL not configured' });
     }
+
+    assertSafeOutboundUrl(url);
+
     const response = await axios.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
       responseType: 'text'
@@ -428,8 +424,10 @@ app.get('/api/weather', async (req, res) => {
     if (!apiKey || apiKey === 'YOUR_OPENWEATHER_API_KEY' || !location?.city) {
       return res.status(503).json({ error: 'Weather not configured' });
     }
-    const currentUrl = `https://api.openweathermap.org/data/2.5/weather?q=${location.city},${location.country}&appid=${apiKey}&units=metric`;
-    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${location.city},${location.country}&appid=${apiKey}&units=metric`;
+    const city = encodeURIComponent(location.city);
+    const country = encodeURIComponent(location.country);
+    const currentUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city},${country}&appid=${apiKey}&units=metric`;
+    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city},${country}&appid=${apiKey}&units=metric`;
     const [currentRes, forecastRes] = await Promise.all([
       axios.get(currentUrl),
       axios.get(forecastUrl).catch(() => ({ data: null }))
