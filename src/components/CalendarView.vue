@@ -15,13 +15,12 @@
           :class="dayCellClassList(day)"
         >
           <div class="day-cell-stack">
-            <img
-              v-if="day.isToday && todayWatermarkIcon(day.todayHighlight)"
+            <div
+              v-if="day.isToday && todayWatermarkMarkup(day.todayHighlight)"
               class="today-watermark"
-              :src="todayWatermarkIcon(day.todayHighlight)"
-              alt=""
               aria-hidden="true"
-            />
+              v-html="todayWatermarkMarkup(day.todayHighlight)"
+            ></div>
             <div class="day-cell-inner">
               <div class="day-number">{{ day.date }}</div>
               <div v-if="day.events.length" class="day-events">
@@ -51,20 +50,20 @@ import {
   resolveTodayHighlight,
   sanitizeTodayHighlightTheme
 } from '../utils/calendarTodayHighlight.js';
-import heartIcon from '../assets/calendar-today/heart.svg';
-import baubleIcon from '../assets/calendar-today/bauble.svg';
-import sparkleIcon from '../assets/calendar-today/sparkle.svg';
-import cakeIcon from '../assets/calendar-today/cake.svg';
-import sunIcon from '../assets/calendar-today/sun.svg';
-import bellIcon from '../assets/calendar-today/bell.svg';
-import toothIcon from '../assets/calendar-today/tooth.svg';
-import crossCareIcon from '../assets/calendar-today/cross-care.svg';
-import pumpkinIcon from '../assets/calendar-today/pumpkin.svg';
-import starIcon from '../assets/calendar-today/star.svg';
-import eggIcon from '../assets/calendar-today/egg.svg';
-import leafIcon from '../assets/calendar-today/leaf.svg';
+import heartIcon from '../assets/calendar-today/heart.svg?raw';
+import baubleIcon from '../assets/calendar-today/bauble.svg?raw';
+import sparkleIcon from '../assets/calendar-today/sparkle.svg?raw';
+import cakeIcon from '../assets/calendar-today/cake.svg?raw';
+import sunIcon from '../assets/calendar-today/sun.svg?raw';
+import bellIcon from '../assets/calendar-today/bell.svg?raw';
+import toothIcon from '../assets/calendar-today/tooth.svg?raw';
+import crossCareIcon from '../assets/calendar-today/cross-care.svg?raw';
+import pumpkinIcon from '../assets/calendar-today/pumpkin.svg?raw';
+import starIcon from '../assets/calendar-today/star.svg?raw';
+import eggIcon from '../assets/calendar-today/egg.svg?raw';
+import leafIcon from '../assets/calendar-today/leaf.svg?raw';
 
-const TODAY_ICON_URLS = {
+const TODAY_ICON_MARKUP = {
   valentines: heartIcon,
   christmas: baubleIcon,
   holiday: sparkleIcon,
@@ -79,9 +78,14 @@ const TODAY_ICON_URLS = {
   thanksgiving: leafIcon
 };
 
-function todayWatermarkIcon(theme) {
+function todayWatermarkMarkup(theme) {
   if (!theme || theme === 'default') return null;
-  return TODAY_ICON_URLS[theme] || null;
+  const markup = TODAY_ICON_MARKUP[theme];
+  if (!markup) return null;
+  return markup.replace(
+    '<svg ',
+    '<svg style="display:block;width:55%;height:auto;" '
+  );
 }
 
 const currentDate = ref(new Date());
@@ -303,11 +307,13 @@ onUnmounted(() => {
 
 .today-watermark {
   position: absolute;
-  top: 22.5%;
-  left: 22.5%;
-  width: 55%;
-  height: 55%;
-  object-fit: contain;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0.18;
   pointer-events: none;
   z-index: 1;
