@@ -15,12 +15,6 @@
           :class="dayCellClassList(day)"
         >
           <div class="day-cell-stack">
-            <div
-              v-if="day.isToday && todayWatermarkMarkup(day.todayHighlight)"
-              class="today-watermark"
-              aria-hidden="true"
-              v-html="todayWatermarkMarkup(day.todayHighlight)"
-            ></div>
             <div class="day-cell-inner">
               <div class="day-number">{{ day.date }}</div>
               <div v-if="day.events.length" class="day-events">
@@ -50,43 +44,6 @@ import {
   resolveTodayHighlight,
   sanitizeTodayHighlightTheme
 } from '../utils/calendarTodayHighlight.js';
-import heartIcon from '../assets/calendar-today/heart.svg?raw';
-import baubleIcon from '../assets/calendar-today/bauble.svg?raw';
-import sparkleIcon from '../assets/calendar-today/sparkle.svg?raw';
-import cakeIcon from '../assets/calendar-today/cake.svg?raw';
-import sunIcon from '../assets/calendar-today/sun.svg?raw';
-import bellIcon from '../assets/calendar-today/bell.svg?raw';
-import toothIcon from '../assets/calendar-today/tooth.svg?raw';
-import crossCareIcon from '../assets/calendar-today/cross-care.svg?raw';
-import pumpkinIcon from '../assets/calendar-today/pumpkin.svg?raw';
-import starIcon from '../assets/calendar-today/star.svg?raw';
-import eggIcon from '../assets/calendar-today/egg.svg?raw';
-import leafIcon from '../assets/calendar-today/leaf.svg?raw';
-
-const TODAY_ICON_MARKUP = {
-  valentines: heartIcon,
-  christmas: baubleIcon,
-  holiday: sparkleIcon,
-  birthday: cakeIcon,
-  vacation: sunIcon,
-  reminder: bellIcon,
-  dental: toothIcon,
-  wellness: crossCareIcon,
-  halloween: pumpkinIcon,
-  independence: starIcon,
-  easter: eggIcon,
-  thanksgiving: leafIcon
-};
-
-function todayWatermarkMarkup(theme) {
-  if (!theme || theme === 'default') return null;
-  const markup = TODAY_ICON_MARKUP[theme];
-  if (!markup) return null;
-  return markup.replace(
-    '<svg ',
-    '<svg style="display:block;width:55%;height:auto;" '
-  );
-}
 
 const currentDate = ref(new Date());
 const events = ref([]);
@@ -305,25 +262,27 @@ onUnmounted(() => {
   flex: 1 1 auto;
 }
 
-.today-watermark {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.18;
-  pointer-events: none;
-  z-index: 1;
-}
-
 /* ----- Today base + themes ----- */
 .day-cell.today {
-  background: rgba(0, 0, 0, 0.42);
+  background-color: rgba(0, 0, 0, 0.42);
   border-width: 2px;
   box-sizing: border-box;
+}
+
+.day-cell.today:not(.today--default)::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 55%;
 }
 
 .day-cell.today--default {
@@ -335,9 +294,17 @@ onUnmounted(() => {
   box-shadow: inset 0 0 0 1px rgba(255, 128, 171, 0.4), 0 0 10px rgba(233, 30, 99, 0.5);
 }
 
+.day-cell.today--valentines::before {
+  background-image: url('../assets/calendar-today/heart.svg');
+}
+
 .day-cell.today--christmas {
   border-color: #2e7d32;
   box-shadow: inset 0 0 0 1px rgba(198, 40, 40, 0.45), 0 0 10px rgba(46, 125, 50, 0.55);
+}
+
+.day-cell.today--christmas::before {
+  background-image: url('../assets/calendar-today/bauble.svg');
 }
 
 .day-cell.today--holiday {
@@ -345,9 +312,17 @@ onUnmounted(() => {
   box-shadow: 0 0 8px rgba(255, 167, 38, 0.5);
 }
 
+.day-cell.today--holiday::before {
+  background-image: url('../assets/calendar-today/sparkle.svg');
+}
+
 .day-cell.today--birthday {
   border-color: #ec407a;
   box-shadow: 0 0 9px rgba(236, 64, 122, 0.55);
+}
+
+.day-cell.today--birthday::before {
+  background-image: url('../assets/calendar-today/cake.svg');
 }
 
 .day-cell.today--vacation {
@@ -355,9 +330,17 @@ onUnmounted(() => {
   box-shadow: 0 0 8px rgba(38, 198, 218, 0.5);
 }
 
+.day-cell.today--vacation::before {
+  background-image: url('../assets/calendar-today/sun.svg');
+}
+
 .day-cell.today--reminder {
   border-color: #ffb300;
   box-shadow: 0 0 8px rgba(255, 179, 0, 0.55);
+}
+
+.day-cell.today--reminder::before {
+  background-image: url('../assets/calendar-today/bell.svg');
 }
 
 .day-cell.today--dental {
@@ -365,9 +348,17 @@ onUnmounted(() => {
   box-shadow: 0 0 8px rgba(77, 208, 225, 0.5);
 }
 
+.day-cell.today--dental::before {
+  background-image: url('../assets/calendar-today/tooth.svg');
+}
+
 .day-cell.today--wellness {
   border-color: #42a5f5;
   box-shadow: 0 0 8px rgba(66, 165, 245, 0.45);
+}
+
+.day-cell.today--wellness::before {
+  background-image: url('../assets/calendar-today/cross-care.svg');
 }
 
 .day-cell.today--halloween {
@@ -375,9 +366,17 @@ onUnmounted(() => {
   box-shadow: 0 0 9px rgba(255, 111, 0, 0.55);
 }
 
+.day-cell.today--halloween::before {
+  background-image: url('../assets/calendar-today/pumpkin.svg');
+}
+
 .day-cell.today--independence {
   border-color: #1565c0;
   box-shadow: 0 0 10px rgba(21, 101, 192, 0.55);
+}
+
+.day-cell.today--independence::before {
+  background-image: url('../assets/calendar-today/star.svg');
 }
 
 .day-cell.today--easter {
@@ -385,9 +384,17 @@ onUnmounted(() => {
   box-shadow: 0 0 8px rgba(171, 71, 188, 0.5);
 }
 
+.day-cell.today--easter::before {
+  background-image: url('../assets/calendar-today/egg.svg');
+}
+
 .day-cell.today--thanksgiving {
   border-color: #8d6e63;
   box-shadow: 0 0 8px rgba(141, 110, 99, 0.5);
+}
+
+.day-cell.today--thanksgiving::before {
+  background-image: url('../assets/calendar-today/leaf.svg');
 }
 
 .day-number {
