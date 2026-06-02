@@ -15,16 +15,6 @@
           :class="dayCellClassList(day)"
         >
           <div class="day-cell-stack">
-            <div
-              v-if="day.isToday && day.todayHighlight !== 'default'"
-              class="today-ornament-layer"
-              aria-hidden="true"
-            >
-              <span class="today-corner today-corner--tl"></span>
-              <span class="today-corner today-corner--tr"></span>
-              <span class="today-corner today-corner--bl"></span>
-              <span class="today-corner today-corner--br"></span>
-            </div>
             <div class="day-cell-inner">
               <div class="day-number">{{ day.date }}</div>
               <div v-if="day.events.length" class="day-events">
@@ -272,62 +262,24 @@ onUnmounted(() => {
   flex: 1 1 auto;
 }
 
-.today-ornament-layer {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 1;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.today-corner {
-  position: absolute;
-  width: 22px;
-  height: 22px;
-  z-index: 1;
-}
-
-/* Sit on / just outside the cell edge so art stays on the border, not over the date. */
-.day-cell.today:not(.today--default) .today-corner--tl {
-  top: -8px;
-  left: -8px;
-}
-
-.day-cell.today:not(.today--default) .today-corner--tr {
-  top: -8px;
-  right: -8px;
-}
-
-.day-cell.today:not(.today--default) .today-corner--bl {
-  bottom: -8px;
-  left: -8px;
-}
-
-.day-cell.today:not(.today--default) .today-corner--br {
-  bottom: -8px;
-  right: -8px;
-}
-
-.today-corner::before {
-  display: block;
-  width: 22px;
-  height: 22px;
-  line-height: 22px;
-  text-align: center;
-  font-size: 16px;
-  text-shadow: 0 0 3px rgba(0, 0, 0, 0.85);
-}
-
 /* ----- Today base + themes ----- */
 .day-cell.today {
   background: rgba(0, 0, 0, 0.42);
   border-width: 2px;
   box-sizing: border-box;
-  overflow: visible;
-  z-index: 2;
+}
+
+.day-cell.today:not(.today--default)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background: var(--today-icon) center / 55% no-repeat;
 }
 
 .day-cell.today--default {
@@ -335,474 +287,75 @@ onUnmounted(() => {
 }
 
 .day-cell.today--valentines {
+  --today-icon: url('../assets/calendar-today/heart.svg');
   border-color: #e91e63;
   box-shadow: inset 0 0 0 1px rgba(255, 128, 171, 0.4), 0 0 10px rgba(233, 30, 99, 0.5);
 }
 
-.day-cell.today--valentines .today-ornament-layer::before {
-  content: '💕';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--valentines .today-ornament-layer::after {
-  content: '✨';
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--valentines .today-corner::before {
-  content: '';
-  background: url('../assets/calendar-today/heart.svg') center / contain no-repeat;
-}
-
 .day-cell.today--christmas {
+  --today-icon: url('../assets/calendar-today/bauble.svg');
   border-color: #2e7d32;
   box-shadow: inset 0 0 0 1px rgba(198, 40, 40, 0.45), 0 0 10px rgba(46, 125, 50, 0.55);
 }
 
-.day-cell.today--christmas .today-ornament-layer::before {
-  content: '🎄';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--christmas .today-ornament-layer::after {
-  content: '🎁';
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--christmas .today-corner::before {
-  content: '';
-  background: url('../assets/calendar-today/bauble.svg') center / contain no-repeat;
-}
-
 .day-cell.today--holiday {
+  --today-icon: url('../assets/calendar-today/sparkle.svg');
   border-color: #ffa726;
   box-shadow: 0 0 8px rgba(255, 167, 38, 0.5);
 }
 
-.day-cell.today--holiday .today-ornament-layer::before {
-  content: '🎉';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--holiday .today-ornament-layer::after {
-  content: '🎊';
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--holiday .today-corner--tl::before {
-  content: '✨';
-}
-
-.day-cell.today--holiday .today-corner--tr::before {
-  content: '🎊';
-}
-
-.day-cell.today--holiday .today-corner--bl::before {
-  content: '🎉';
-}
-
-.day-cell.today--holiday .today-corner--br::before {
-  content: '✨';
-}
-
 .day-cell.today--birthday {
+  --today-icon: url('../assets/calendar-today/cake.svg');
   border-color: #ec407a;
   box-shadow: 0 0 9px rgba(236, 64, 122, 0.55);
 }
 
-.day-cell.today--birthday .today-corner--tl::before,
-.day-cell.today--birthday .today-corner--br::before {
-  content: '🎈';
-}
-
-.day-cell.today--birthday .today-corner--tr::before,
-.day-cell.today--birthday .today-corner--bl::before {
-  content: '🎂';
-}
-
 .day-cell.today--vacation {
+  --today-icon: url('../assets/calendar-today/sun.svg');
   border-color: #26c6da;
   box-shadow: 0 0 8px rgba(38, 198, 218, 0.5);
 }
 
-.day-cell.today--vacation .today-ornament-layer::before {
-  content: '🌴';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--vacation .today-ornament-layer::after {
-  content: '✈️';
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--vacation .today-corner::before {
-  content: '';
-  background: url('../assets/calendar-today/sun.svg') center / contain no-repeat;
-}
-
 .day-cell.today--reminder {
+  --today-icon: url('../assets/calendar-today/bell.svg');
   border-color: #ffb300;
   box-shadow: 0 0 8px rgba(255, 179, 0, 0.55);
 }
 
-.day-cell.today--reminder .today-ornament-layer::before {
-  content: '⏰';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--reminder .today-ornament-layer::after {
-  content: '📋';
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--reminder .today-corner--tl::before,
-.day-cell.today--reminder .today-corner--tr::before {
-  content: '🔔';
-}
-
-.day-cell.today--reminder .today-corner--bl::before,
-.day-cell.today--reminder .today-corner--br::before {
-  content: '📌';
-}
-
 .day-cell.today--dental {
+  --today-icon: url('../assets/calendar-today/tooth.svg');
   border-color: #4dd0e1;
   box-shadow: 0 0 8px rgba(77, 208, 225, 0.5);
 }
 
-.day-cell.today--dental .today-ornament-layer::before {
-  content: '🦷';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--dental .today-ornament-layer::after {
-  content: '✨';
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--dental .today-corner--tl::before,
-.day-cell.today--dental .today-corner--tr::before,
-.day-cell.today--dental .today-corner--bl::before,
-.day-cell.today--dental .today-corner--br::before {
-  content: '🦷';
-}
-
 .day-cell.today--wellness {
+  --today-icon: url('../assets/calendar-today/cross-care.svg');
   border-color: #42a5f5;
   box-shadow: 0 0 8px rgba(66, 165, 245, 0.45);
 }
 
-.day-cell.today--wellness .today-ornament-layer::before {
-  content: '💬';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--wellness .today-ornament-layer::after {
-  content: '💊';
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--wellness .today-corner::before {
-  content: '';
-  background: url('../assets/calendar-today/cross-care.svg') center / contain no-repeat;
-}
-
 .day-cell.today--halloween {
+  --today-icon: url('../assets/calendar-today/pumpkin.svg');
   border-color: #ff6f00;
   box-shadow: 0 0 9px rgba(255, 111, 0, 0.55);
 }
 
-.day-cell.today--halloween .today-corner--tl::before,
-.day-cell.today--halloween .today-corner--tr::before {
-  content: '🎃';
-}
-
-.day-cell.today--halloween .today-corner--bl::before,
-.day-cell.today--halloween .today-corner--br::before {
-  content: '👻';
-}
-
-.day-cell.today--halloween .today-ornament-layer::before {
-  content: '🕷️';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--halloween .today-ornament-layer::after {
-  content: '🕸️';
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
 .day-cell.today--independence {
+  --today-icon: url('../assets/calendar-today/star.svg');
   border-color: #1565c0;
   box-shadow: 0 0 10px rgba(21, 101, 192, 0.55);
 }
 
-.day-cell.today--independence .today-corner--tl::before,
-.day-cell.today--independence .today-corner--br::before {
-  content: '🎆';
-}
-
-.day-cell.today--independence .today-corner--tr::before,
-.day-cell.today--independence .today-corner--bl::before {
-  content: '⭐';
-}
-
-.day-cell.today--independence .today-ornament-layer::before {
-  content: '🚩';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--independence .today-ornament-layer::after {
-  content: '🎆';
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
 .day-cell.today--easter {
+  --today-icon: url('../assets/calendar-today/egg.svg');
   border-color: #ab47bc;
   box-shadow: 0 0 8px rgba(171, 71, 188, 0.5);
 }
 
-.day-cell.today--easter .today-corner--tl::before,
-.day-cell.today--easter .today-corner--tr::before {
-  content: '🐰';
-}
-
-.day-cell.today--easter .today-corner--bl::before,
-.day-cell.today--easter .today-corner--br::before {
-  content: '🥚';
-}
-
-.day-cell.today--easter .today-ornament-layer::before {
-  content: '🌸';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--easter .today-ornament-layer::after {
-  content: '🌸';
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
 .day-cell.today--thanksgiving {
+  --today-icon: url('../assets/calendar-today/leaf.svg');
   border-color: #8d6e63;
   box-shadow: 0 0 8px rgba(141, 110, 99, 0.5);
-}
-
-.day-cell.today--thanksgiving .today-corner--tl::before,
-.day-cell.today--thanksgiving .today-corner--br::before {
-  content: '🦃';
-}
-
-.day-cell.today--thanksgiving .today-corner--tr::before,
-.day-cell.today--thanksgiving .today-corner--bl::before {
-  content: '🍁';
-}
-
-.day-cell.today--thanksgiving .today-ornament-layer::before {
-  content: '🧺';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-
-.day-cell.today--thanksgiving .today-ornament-layer::after {
-  content: '🦃';
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  margin-top: -8px;
-  width: 20px;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
 }
 
 .day-number {
