@@ -1,0 +1,82 @@
+---
+description: Chromium 72 CSS compatibility requirements
+alwaysApply: true
+---
+
+# Chromium 72 Compatibility
+
+Target runtime includes Chromium `72.0.3626.121` (Raspberry Pi kiosk). Keep styles compatible.
+
+## Production builds matter
+
+Pi runs the **Vite production bundle** (`pnpm run build`), not the dev server. CSS minification can rewrite valid source into unsupported output. After layout or decoration changes, inspect `dist/assets/*.css` for properties Chromium 72 does not support — do not assume dev-server behavior matches Pi.
+
+## CSS: avoid or replace
+
+- **Flexbox `gap`, `row-gap`, `column-gap`** — not supported. Use margin-based sibling spacing instead (for example, `> * + *`).
+- **`inset` shorthand** — added in Chrome 87. Vite/esbuild minifies `top/right/bottom/left: 0` to `inset: 0` in production, which Chromium 72 ignores (layer gets no size/position). For full-bleed absolute layers use:
+
+```css
+/* Avoid in source — minifies to inset: 0 in dist */
+.overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+/* Preferred */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+```
+
+- **CSS custom properties in `background` shorthand** — unreliable (for example `background: var(--icon) center / 55% no-repeat`). Use longhand `background-image`, `background-position`, `background-size`, and `background-repeat`, with per-class `url(...)` values.
+- **Percentage `height` on absolutely positioned elements inside flex layouts** — often resolves to `0` on Chromium 72. Prefer overlays on the sized grid/flex **cell** (for example `.day-cell`) rather than nested flex children.
+- **Prefer broadly supported CSS** over newer syntax unless a fallback is included.
+
+## Decorative images and watermarks
+
+Patterns that failed on Pi (calendar today watermark):
+
+- `::before` + `background: var(--today-icon) …` (CSS variable in shorthand)
+- `<img>` with `height: 55%` inside a nested flex stack
+- Inline SVG via `v-html` + flex centering (also fragile with Vue scoped `:deep()` on injected markup)
+
+Pattern that works:
+
+- `::before` on the **grid cell** with explicit longhand background properties
+- Per-theme class sets `background-image: url('../assets/…svg')` (Vite inlines as `data:image/svg+xml` in production — no separate fetch)
+- Overlay sized with `top: 0; left: 0; width: 100%; height: 100%` and `background-size: 55%`
+
+## Verification checklist
+
+After CSS changes targeting Pi:
+
+1. Run `pnpm run build`
+2. Search built CSS for `inset:` — should not appear on critical layout/decoration rules
+3. Confirm overlay rules use `width: 100%; height: 100%` (or explicit px/rem), not four-sided zero offsets alone
+
+## Flex spacing example
+
+```css
+/* Avoid for Chromium 72 flex layouts */
+.items {
+  display: flex;
+  gap: 8px;
+}
+
+/* Preferred */
+.items {
+  display: flex;
+}
+
+.items > * + * {
+  margin-left: 8px;
+}
+```
