@@ -187,7 +187,7 @@ Recommended Canadian sources include CBC Canada/World/local feeds, CTV top stori
 {
   "wallpaper": {
     "enabled": true,
-    "providers": ["openverse", "pexels", "pixabay", "unsplash"],
+    "providers": ["openverse", "nasa", "pexels", "pixabay", "unsplash"],
     "queries": [
       "landscape",
       "scenic landscape",
@@ -218,8 +218,16 @@ Recommended Canadian sources include CBC Canada/World/local feeds, CTV top stori
       "clouds",
       "storm clouds",
       "space",
+      "deep space",
       "stars",
       "galaxy",
+      "nebula",
+      "hubble",
+      "james webb telescope",
+      "earth from space",
+      "mars",
+      "moon",
+      "aurora",
       "abstract texture",
       "abstract pattern",
       "geometric pattern",
@@ -251,7 +259,7 @@ Recommended Canadian sources include CBC Canada/World/local feeds, CTV top stori
 }
 ```
 
-- `providers`: Image providers to use. `openverse` works without a key; `pexels`, `pixabay`, and `unsplash` require server-side API keys.
+- `providers`: Image providers to use. `openverse` and `nasa` work without a key; `pexels`, `pixabay`, and `unsplash` require server-side API keys.
 - `queries`: Broad image search terms. Keep these varied for a wide background mix.
 - `selectionType`: `random` shuffles the pool. `highest` is retained for compatibility but most non-Reddit sources do not provide scores.
 - `rotationInterval`: How often to rotate background image (milliseconds, default 30 minutes)
@@ -260,6 +268,7 @@ Recommended Canadian sources include CBC Canada/World/local feeds, CTV top stori
 Image provider notes:
 
 - **Openverse**: No API key required. Searches Creative Commons/public-domain media and returns attribution metadata. Wikimedia is excluded from Openverse searches because its results were too inconsistent for background images.
+- **NASA**: No API key required. Searches the NASA Image and Video Library for image assets and uses larger asset URLs when available.
 - **Pexels**: Free API key required. Sign up at [pexels.com/api](https://www.pexels.com/api/), create an API key, then set `PEXELS_API_KEY` in `.env`.
 - **Pixabay**: Free API key required. Sign up at [pixabay.com/api/docs](https://pixabay.com/api/docs/), copy your API key, then set `PIXABAY_API_KEY` in `.env`.
 - **Unsplash**: Free access key required. Create an app at [unsplash.com/developers](https://unsplash.com/developers), copy the Access Key, then set `UNSPLASH_ACCESS_KEY` in `.env`. Unsplash demo apps have rate limits, so keep Openverse enabled as a fallback.

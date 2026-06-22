@@ -10,7 +10,7 @@ const TARGET_ASPECT_RATIO = Math.round((TARGET_WIDTH / TARGET_HEIGHT) * 10) / 10
 const OPENVERSE_QUERY_LIMIT = 8;
 const OPENVERSE_QUERIES_PER_REFRESH = 4;
 const DEFAULT_IMAGE_POOL_REFRESH_INTERVAL = 2 * 60 * 60 * 1000;
-const DEFAULT_PROVIDERS = ['openverse', 'pexels', 'pixabay', 'unsplash'];
+const DEFAULT_PROVIDERS = ['openverse', 'nasa', 'pexels', 'pixabay', 'unsplash'];
 const ALLOWED_PROVIDERS = new Set(DEFAULT_PROVIDERS);
 const DEFAULT_QUERIES = [
   'landscape',
@@ -42,8 +42,16 @@ const DEFAULT_QUERIES = [
   'clouds',
   'storm clouds',
   'space',
+  'deep space',
   'stars',
   'galaxy',
+  'nebula',
+  'hubble',
+  'james webb telescope',
+  'earth from space',
+  'mars',
+  'moon',
+  'aurora',
   'abstract texture',
   'abstract pattern',
   'geometric pattern',

@@ -62,6 +62,7 @@ const LOCAL_NETWORK_PING_TIMEOUT_MS = 3000;
 const HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const SPEED_TREND_SAMPLE_COUNT = 7;
 const OPENVERSE_IMAGE_SEARCH_URL = 'https://api.openverse.org/v1/images/';
+const NASA_IMAGE_SEARCH_URL = 'https://images-api.nasa.gov/search';
 const PEXELS_IMAGE_SEARCH_URL = 'https://api.pexels.com/v1/search';
 const PIXABAY_IMAGE_SEARCH_URL = 'https://pixabay.com/api/';
 const UNSPLASH_IMAGE_SEARCH_URL = 'https://api.unsplash.com/search/photos';
@@ -303,15 +304,16 @@ function loadServerConfig() {
 }
 
 function configuredImageProviders(providers) {
-  const list = Array.isArray(providers) && providers.length ? providers : ['openverse'];
+  const list = Array.isArray(providers) && providers.length ? providers : ['openverse', 'nasa'];
   const configured = list.filter(provider => {
     if (provider === 'openverse') return true;
+    if (provider === 'nasa') return true;
     if (provider === 'pexels') return Boolean(process.env.PEXELS_API_KEY);
     if (provider === 'pixabay') return Boolean(process.env.PIXABAY_API_KEY);
     if (provider === 'unsplash') return Boolean(process.env.UNSPLASH_ACCESS_KEY);
     return false;
   });
-  return configured.length ? configured : ['openverse'];
+  return configured.length ? configured : ['openverse', 'nasa'];
 }
 
 function positiveNumber(value, fallback) {
@@ -837,6 +839,55 @@ function missingImageProviderKey(provider, envName) {
   };
 }
 
+function selectNasaAssetUrl(items, fallbackUrl) {
+  const urls = Array.isArray(items)
+    ? items
+        .map(item => typeof item === 'string' ? item : item?.href)
+        .filter(url => /^https?:\/\//i.test(url))
+        .filter(url => /\.(jpe?g|png|webp)(?:[?#].*)?$/i.test(url))
+    : [];
+  return urls.find(url => /~large\./i.test(url)) ||
+    urls.find(url => /~medium\./i.test(url)) ||
+    urls.find(url => /~orig\./i.test(url)) ||
+    urls[0] ||
+    fallbackUrl;
+}
+
+function selectNasaImageLink(links, fallbackLink) {
+  const imageLinks = Array.isArray(links)
+    ? links
+        .filter(link => link?.href && link.render === 'image')
+        .filter(link => /\.(jpe?g|png|webp)(?:[?#].*)?$/i.test(link.href))
+    : [];
+  return imageLinks.find(link => /~large\./i.test(link.href)) ||
+    imageLinks.find(link => /~medium\./i.test(link.href)) ||
+    imageLinks.find(link => /~orig\./i.test(link.href)) ||
+    imageLinks[0] ||
+    fallbackLink;
+}
+
+async function fetchNasaAssetUrl(manifestUrl, fallbackUrl) {
+  if (!manifestUrl || !/^https:\/\/images-assets\.nasa\.gov\//i.test(manifestUrl)) {
+    return fallbackUrl;
+  }
+
+  try {
+    const response = await axios.get(manifestUrl, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'homeorganizer/1.0'
+      },
+      timeout: 5000,
+      validateStatus: () => true
+    });
+
+    if (response.status !== 200) return fallbackUrl;
+    return selectNasaAssetUrl(response.data?.collection?.items, fallbackUrl);
+  } catch (error) {
+    return fallbackUrl;
+  }
+}
+
 // Openverse image search proxy endpoint
 app.get('/api/images/openverse', async (req, res) => {
   try {
@@ -894,6 +945,75 @@ app.get('/api/images/openverse', async (req, res) => {
     console.error('Error fetching Openverse images:', error);
     const status = error.response?.status || 500;
     const message = error.response?.statusText || 'Failed to fetch Openverse images';
+    res.status(status).json({ error: message });
+  }
+});
+
+app.get('/api/images/nasa', async (req, res) => {
+  try {
+    const query = sanitizeImageQuery(req.query.query || req.query.q);
+    const limit = clampInteger(req.query.limit, 10, 1, 20);
+    const page = clampInteger(req.query.page, 1, 1, 50);
+
+    const response = await axios.get(NASA_IMAGE_SEARCH_URL, {
+      params: {
+        q: query,
+        media_type: 'image',
+        page_size: limit,
+        page
+      },
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'homeorganizer/1.0'
+      },
+      timeout: 10000,
+      validateStatus: () => true
+    });
+
+    const items = response.data?.collection?.items;
+    if (response.status !== 200 || !Array.isArray(items)) {
+      const message = response.statusText || 'Failed to fetch NASA images';
+      return res.status(response.status || 502).json({ error: message });
+    }
+
+    const images = await Promise.all(items.map(async item => {
+      const metadata = Array.isArray(item.data) ? item.data[0] : {};
+      const links = Array.isArray(item.links) ? item.links : [];
+      const preview = links.find(link => link.render === 'image' && link.rel === 'preview' && link.href) ||
+        links.find(link => link.render === 'image' && link.href);
+      const selectedLink = selectNasaImageLink(links, preview);
+      const title = metadata.title || 'NASA image';
+      const nasaId = metadata.nasa_id;
+      const landingUrl = nasaId ? `https://images.nasa.gov/details/${encodeURIComponent(nasaId)}` : item.href;
+      const directUrl = selectedLink?.href;
+      const url = directUrl || await fetchNasaAssetUrl(item.href, preview?.href);
+
+      return {
+        id: nasaId || item.href,
+        title,
+        url,
+        thumbnail: preview?.href,
+        creator: metadata.center || 'NASA',
+        creator_url: 'https://www.nasa.gov/',
+        provider: 'nasa',
+        source: 'nasa',
+        foreign_landing_url: landingUrl,
+        attribution: `${title} — NASA`,
+        mature: false,
+        width: selectedLink?.width || null,
+        height: selectedLink?.height || null,
+        filetype: 'image/jpeg'
+      };
+    }));
+
+    res.json({ images: images.filter(image => image.url) });
+  } catch (error) {
+    if (error.message === 'Invalid image query') {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Error fetching NASA images:', error);
+    const status = error.response?.status || 500;
+    const message = error.response?.statusText || 'Failed to fetch NASA images';
     res.status(status).json({ error: message });
   }
 });
