@@ -153,8 +153,13 @@ Get your free API key at [openweathermap.org](https://openweathermap.org/api)
         "enabled": true
       },
       {
-        "name": "France 24",
-        "url": "https://www.france24.com/en/rss",
+        "name": "The Guardian World",
+        "url": "https://www.theguardian.com/world/rss",
+        "enabled": true
+      },
+      {
+        "name": "NPR World",
+        "url": "https://feeds.npr.org/1004/rss.xml",
         "enabled": true
       },
       {
@@ -173,7 +178,7 @@ Get your free API key at [openweathermap.org](https://openweathermap.org/api)
 - `refreshInterval`: How often to refresh headlines (milliseconds)
 - `headlineDisplayInterval`: How long to display each headline (milliseconds)
 
-Recommended Canadian sources include CBC Canada/World/local feeds, CTV top stories/Canada, and Global News feeds. Good non-US-centric world sources include BBC World, Al Jazeera, France 24, Deutsche Welle, and The Guardian World.
+Recommended Canadian sources include CBC Canada/World/local feeds, CTV top stories/Canada, and Global News feeds. Good non-US-centric world sources include BBC World, Al Jazeera, The Guardian World, and Deutsche Welle. NPR World is included as one US-based world news source.
 
 ### Wallpaper
 

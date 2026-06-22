@@ -58,8 +58,13 @@ function getDefaultConfig() {
           enabled: true
         },
         {
-          name: "France 24",
-          url: "https://www.france24.com/en/rss",
+          name: "The Guardian World",
+          url: "https://www.theguardian.com/world/rss",
+          enabled: true
+        },
+        {
+          name: "NPR World",
+          url: "https://feeds.npr.org/1004/rss.xml",
           enabled: true
         },
         {
