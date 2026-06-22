@@ -1,11 +1,13 @@
 <template>
   <div class="network-status-widget">
-    <h2 class="section-title">Network Status</h2>
+    <h2 class="section-title">
+      <span>Network Status</span>
+      <span class="status-dot title-status-dot" :class="statusDotClass"></span>
+    </h2>
     <div v-if="loading" class="loading">Loading network status...</div>
     <div v-else class="status-content">
       <div class="status-main">
         <span class="status-group">
-          <span class="status-dot" :class="statusDotClass"></span>
           <span class="status-label">{{ status.online ? 'Online' : 'Offline' }}</span>
           <span v-if="status.online && status.pingMs != null" class="status-ping">{{ formatMetric(status.pingMs) }} ms</span>
           <span class="quality-label" :class="pingQualityClass">{{ pingQualityLabel }}</span>
@@ -241,6 +243,8 @@ onUnmounted(() => {
 }
 
 .section-title {
+  display: flex;
+  align-items: center;
   font-size: 1.1rem;
   font-weight: 600;
   color: #ffffff;
@@ -248,6 +252,10 @@ onUnmounted(() => {
   margin-bottom: 2px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   padding-bottom: 1px;
+}
+
+.section-title > * + * {
+  margin-left: 8px;
 }
 
 .loading {
@@ -298,6 +306,10 @@ onUnmounted(() => {
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+.title-status-dot {
+  margin-top: 1px;
 }
 
 .status-dot-online {
