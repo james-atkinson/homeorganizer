@@ -138,6 +138,27 @@ function getDefaultConfig() {
       selectionType: "random",
       rotationInterval: 1800000,
       imagePoolRefreshInterval: 7200000
+    },
+    networkStatus: {
+      uptimeWindowHours: 24,
+      localCheck: {
+        enabled: true,
+        target: "auto"
+      },
+      thresholds: {
+        ping: {
+          goodMs: 60,
+          slowMs: 150
+        },
+        download: {
+          goodMbps: 50,
+          limitedMbps: 15
+        },
+        upload: {
+          goodMbps: 10,
+          limitedMbps: 3
+        }
+      }
     }
   };
 }

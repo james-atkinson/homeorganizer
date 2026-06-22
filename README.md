@@ -9,7 +9,8 @@ A Vue 3 application for a Raspberry Pi kitchen display board featuring calendar,
 - **Upcoming Events List**: Shows all events up to 15 days out
 - **Weather Widget**: Current weather and 5-day forecast from OpenWeatherMap
 - **News Headlines**: Rotating headlines from configurable RSS feeds
-- **Rotating Background**: Public-source images from Openverse
+- **Rotating Background**: Public-source images from Openverse and optional keyed providers
+- **Network Status**: Internet/local network health, speed trends, and 24-hour uptime summary
 - **1080p Optimized**: Designed specifically for 1920x1080 displays
 
 ## Prerequisites
@@ -272,6 +273,41 @@ UNSPLASH_ACCESS_KEY=your_unsplash_access_key
 ```
 
 The server loads `.env` automatically before reading provider keys. Real environment variables still override `.env` values if both are set. Do not put image provider API keys in `public/config.json`; that file can be served to browsers. The dashboard shows returned credit text in the lower-right corner when available. Reddit sources were removed because Reddit blocks anonymous/scripted JSON requests with anti-bot and network-security protections.
+
+### Network Status
+
+```json
+{
+  "networkStatus": {
+    "uptimeWindowHours": 24,
+    "localCheck": {
+      "enabled": true,
+      "target": "auto"
+    },
+    "thresholds": {
+      "ping": {
+        "goodMs": 60,
+        "slowMs": 150
+      },
+      "download": {
+        "goodMbps": 50,
+        "limitedMbps": 15
+      },
+      "upload": {
+        "goodMbps": 10,
+        "limitedMbps": 3
+      }
+    }
+  }
+}
+```
+
+- `uptimeWindowHours`: Window used for the persistent uptime percentage and outage count.
+- `localCheck.enabled`: Enables a local network probe in addition to the internet probe.
+- `localCheck.target`: Use `"auto"` to detect the default gateway, or set a router/gateway hostname or IP address.
+- `thresholds`: Controls the `Good`, `Limited`, `Slow`, and `Poor` labels shown by the widget.
+
+The backend stores recent ping and speed-test history in `data/speedtests.sqlite`. Ping history powers the uptime summary and outage count; speed-test history powers download/upload trend indicators.
 
 ## Development
 

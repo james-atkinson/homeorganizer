@@ -4,8 +4,16 @@ const CACHE_DURATION = 30 * 1000;
 
 const EMPTY_STATUS = {
   online: false,
+  generatedAt: null,
   lastPingAt: null,
+  lastPingAgeMs: null,
+  pingStale: true,
   pingMs: null,
+  failureReason: null,
+  failureContext: null,
+  localNetwork: null,
+  uptime: null,
+  thresholds: null,
   speedTest: null
 };
 
@@ -31,6 +39,6 @@ export async function fetchNetworkStatus(options = {}) {
     if (cachedNetworkStatus) {
       return cachedNetworkStatus;
     }
-    return EMPTY_STATUS;
+    return { ...EMPTY_STATUS, generatedAt: Date.now() };
   }
 }
