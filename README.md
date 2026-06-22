@@ -1,6 +1,6 @@
 # Family Calendar Display Board
 
-A Vue 3 application for a Raspberry Pi kitchen display board featuring calendar, weather, configurable RSS feeds, and Reddit feeds. This is a non-interactive display - all content updates automatically with no user interaction required.
+A Vue 3 application for a Raspberry Pi kitchen display board featuring calendar, weather, configurable RSS news feeds, and rotating public-source background images. This is a non-interactive display - all content updates automatically with no user interaction required.
 
 ## Features
 
@@ -8,8 +8,8 @@ A Vue 3 application for a Raspberry Pi kitchen display board featuring calendar,
 - **Date & Time Display**: Large, readable current date and time
 - **Upcoming Events List**: Shows all events up to 15 days out
 - **Weather Widget**: Current weather and 5-day forecast from OpenWeatherMap
-- **News Headlines**: Rotating headlines from configurable RSS feeds and Reddit
-- **Rotating Background**: Beautiful wallpapers from Reddit that rotate every 30 minutes
+- **News Headlines**: Rotating headlines from configurable RSS feeds
+- **Rotating Background**: Public-source images from Openverse
 - **1080p Optimized**: Designed specifically for 1920x1080 displays
 
 ## Prerequisites
@@ -25,7 +25,7 @@ A Vue 3 application for a Raspberry Pi kitchen display board featuring calendar,
 ## Architecture
 
 The application consists of two parts:
-- **Backend API Server** (Express.js): Runs on port 3000, provides proxy endpoints for Reddit, RSS feeds, and Calendar to avoid CORS issues
+- **Backend API Server** (Express.js): Runs on port 3000, provides proxy endpoints for RSS feeds, Openverse image search, and Calendar to avoid CORS issues
 - **Frontend** (Vue 3 + Vite): The display interface that calls the backend API endpoints
 
 ## Installation
@@ -134,14 +134,35 @@ Get your free API key at [openweathermap.org](https://openweathermap.org/api)
     "rssFeeds": [
       {
         "name": "CBC Canada News",
-        "url": "http://rss.cbc.ca/lineup/canada.xml",
+        "url": "https://www.cbc.ca/webfeed/rss/rss-canada",
+        "enabled": true
+      },
+      {
+        "name": "CBC World News",
+        "url": "https://www.cbc.ca/webfeed/rss/rss-world",
+        "enabled": true
+      },
+      {
+        "name": "BBC World",
+        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "enabled": true
+      },
+      {
+        "name": "Al Jazeera",
+        "url": "https://www.aljazeera.com/xml/rss/all.xml",
+        "enabled": true
+      },
+      {
+        "name": "France 24",
+        "url": "https://www.france24.com/en/rss",
+        "enabled": true
+      },
+      {
+        "name": "DW World",
+        "url": "https://rss.dw.com/rdf/rss-en-world",
         "enabled": true
       }
     ],
-    "reddit": {
-      "enabled": true,
-      "subreddits": ["politics"]
-    },
     "refreshInterval": 600000,
     "headlineDisplayInterval": 6000
   }
@@ -149,9 +170,10 @@ Get your free API key at [openweathermap.org](https://openweathermap.org/api)
 ```
 
 - `rssFeeds`: Array of RSS feeds to fetch headlines from
-- `reddit.subreddits`: Array of subreddit names (without r/)
 - `refreshInterval`: How often to refresh headlines (milliseconds)
 - `headlineDisplayInterval`: How long to display each headline (milliseconds)
+
+Recommended Canadian sources include CBC Canada/World/local feeds, CTV top stories/Canada, and Global News feeds. Good non-US-centric world sources include BBC World, Al Jazeera, France 24, Deutsche Welle, and The Guardian World.
 
 ### Wallpaper
 
@@ -159,16 +181,92 @@ Get your free API key at [openweathermap.org](https://openweathermap.org/api)
 {
   "wallpaper": {
     "enabled": true,
-    "subreddits": ["wallpaper", "wallpapers"],
+    "providers": ["openverse", "pexels", "pixabay", "unsplash"],
+    "queries": [
+      "landscape",
+      "scenic landscape",
+      "panoramic view",
+      "city skyline",
+      "city at night",
+      "street photography",
+      "architecture",
+      "modern architecture",
+      "historic architecture",
+      "ocean",
+      "coastline",
+      "beach",
+      "waterfall",
+      "river",
+      "lake",
+      "forest",
+      "autumn forest",
+      "misty forest",
+      "mountains",
+      "snowy mountains",
+      "desert",
+      "canyon",
+      "prairie",
+      "field",
+      "sunrise",
+      "sunset",
+      "clouds",
+      "storm clouds",
+      "space",
+      "stars",
+      "galaxy",
+      "abstract texture",
+      "abstract pattern",
+      "geometric pattern",
+      "colorful abstract",
+      "wildlife",
+      "birds",
+      "flowers",
+      "botanical",
+      "northern lights",
+      "weather",
+      "travel",
+      "train",
+      "bridge",
+      "harbour",
+      "island",
+      "garden",
+      "macro photography",
+      "aerial photography",
+      "night photography",
+      "winter scene",
+      "spring flowers",
+      "summer landscape",
+      "autumn landscape"
+    ],
+    "selectionType": "random",
     "rotationInterval": 1800000,
     "imagePoolRefreshInterval": 7200000
   }
 }
 ```
 
-- `subreddits`: Reddit subreddits to fetch wallpapers from
+- `providers`: Image providers to use. `openverse` works without a key; `pexels`, `pixabay`, and `unsplash` require server-side API keys.
+- `queries`: Broad image search terms. Keep these varied for a wide background mix.
+- `selectionType`: `random` shuffles the pool. `highest` is retained for compatibility but most non-Reddit sources do not provide scores.
 - `rotationInterval`: How often to rotate background image (milliseconds, default 30 minutes)
 - `imagePoolRefreshInterval`: How often to refresh the image pool (milliseconds, default 2 hours)
+
+Image provider notes:
+
+- **Openverse**: No API key required. Searches Creative Commons/public-domain media and returns attribution metadata. Wikimedia is excluded from Openverse searches because its results were too inconsistent for background images.
+- **Pexels**: Free API key required. Sign up at [pexels.com/api](https://www.pexels.com/api/), create an API key, then set `PEXELS_API_KEY` in `.env`.
+- **Pixabay**: Free API key required. Sign up at [pixabay.com/api/docs](https://pixabay.com/api/docs/), copy your API key, then set `PIXABAY_API_KEY` in `.env`.
+- **Unsplash**: Free access key required. Create an app at [unsplash.com/developers](https://unsplash.com/developers), copy the Access Key, then set `UNSPLASH_ACCESS_KEY` in `.env`. Unsplash demo apps have rate limits, so keep Openverse enabled as a fallback.
+
+Create `.env` at the project root (or copy `.env.example`) and fill in any provider keys you want to use:
+
+```dotenv
+PEXELS_API_KEY=your_pexels_key
+PIXABAY_API_KEY=your_pixabay_key
+UNSPLASH_ACCESS_KEY=your_unsplash_access_key
+```
+
+The server loads `.env` automatically before reading provider keys. Real environment variables still override `.env` values if both are set. Do not put image provider API keys in `public/config.json`; that file can be served to browsers. The dashboard shows returned credit text in the lower-right corner when available. Reddit sources were removed because Reddit blocks anonymous/scripted JSON requests with anti-bot and network-security protections.
 
 ## Development
 
@@ -182,6 +280,8 @@ homeorganizer/
 │   ├── utils/           # Utility functions
 │   └── styles/          # Global styles
 ├── config.json          # Configuration (project root; not served; see .gitignore)
+├── .env                 # Optional local API keys (ignored; copy from .env.example)
+├── .env.example         # Example local environment file
 ├── public/
 ├── deploy/              # Deployment scripts
 └── dist/                # Production build output
@@ -233,8 +333,9 @@ Your system is **Raspbian Stretch** (Debian 9). Node.js 18 requires glibc ≥ 2.
 
 ### Wallpapers not loading
 
-- Check that the Reddit subreddits exist and have image posts
 - Verify network connectivity
+- Check whether Openverse is rate-limiting or unavailable
+- If using Pexels, Pixabay, or Unsplash, verify the matching environment variable is set on the server
 - Check browser console for errors
 
 ### Application not starting on boot

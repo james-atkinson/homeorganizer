@@ -39,35 +39,97 @@ function getDefaultConfig() {
       rssFeeds: [
         {
           name: "CBC Canada News",
-          url: "http://rss.cbc.ca/lineup/canada.xml",
+          url: "https://www.cbc.ca/webfeed/rss/rss-canada",
           enabled: true
         },
         {
           name: "CBC World News",
-          url: "http://rss.cbc.ca/lineup/world.xml",
+          url: "https://www.cbc.ca/webfeed/rss/rss-world",
           enabled: true
         },
         {
-          name: "CBC Hockey",
-          url: "http://rss.cbc.ca/lineup/sports-nhl.xml",
+          name: "BBC World",
+          url: "https://feeds.bbci.co.uk/news/world/rss.xml",
           enabled: true
         },
         {
-          name: "CBC Edmonton News",
-          url: "http://rss.cbc.ca/lineup/canada-edmonton.xml",
+          name: "Al Jazeera",
+          url: "https://www.aljazeera.com/xml/rss/all.xml",
+          enabled: true
+        },
+        {
+          name: "France 24",
+          url: "https://www.france24.com/en/rss",
+          enabled: true
+        },
+        {
+          name: "DW World",
+          url: "https://rss.dw.com/rdf/rss-en-world",
           enabled: true
         }
       ],
-      reddit: {
-        enabled: true,
-        subreddits: ["politics", "canada"]
-      },
       refreshInterval: 600000,
       headlineDisplayInterval: 6000
     },
     wallpaper: {
       enabled: true,
-      subreddits: ["wallpaper", "wallpapers"],
+      providers: ["openverse", "pexels", "pixabay", "unsplash"],
+      queries: [
+        "landscape",
+        "scenic landscape",
+        "panoramic view",
+        "city skyline",
+        "city at night",
+        "street photography",
+        "architecture",
+        "modern architecture",
+        "historic architecture",
+        "ocean",
+        "coastline",
+        "beach",
+        "waterfall",
+        "river",
+        "lake",
+        "forest",
+        "autumn forest",
+        "misty forest",
+        "mountains",
+        "snowy mountains",
+        "desert",
+        "canyon",
+        "prairie",
+        "field",
+        "sunrise",
+        "sunset",
+        "clouds",
+        "storm clouds",
+        "space",
+        "stars",
+        "galaxy",
+        "abstract texture",
+        "abstract pattern",
+        "geometric pattern",
+        "colorful abstract",
+        "wildlife",
+        "birds",
+        "flowers",
+        "botanical",
+        "northern lights",
+        "weather",
+        "travel",
+        "train",
+        "bridge",
+        "harbour",
+        "island",
+        "garden",
+        "macro photography",
+        "aerial photography",
+        "night photography",
+        "winter scene",
+        "spring flowers",
+        "summer landscape",
+        "autumn landscape"
+      ],
       selectionType: "random",
       rotationInterval: 1800000,
       imagePoolRefreshInterval: 7200000

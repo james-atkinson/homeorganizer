@@ -8,25 +8,55 @@ import Database from 'better-sqlite3';
 import {
   assertSafeOutboundUrl,
   getConfiguredRssUrls,
-  isAllowedRssFeedUrl,
-  sanitizeRedditSort,
-  sanitizeRedditSubreddit
+  isAllowedRssFeedUrl
 } from './urlSafety.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-const app = express();
-const PORT = process.env.PORT || 3000;
 
 const projectRoot = join(__dirname, '..');
 const configPath = join(projectRoot, 'config.json');
 const publicConfigPath = join(projectRoot, 'public', 'config.json');
 const dataDir = join(projectRoot, 'data');
 const networkDbPath = join(dataDir, 'speedtests.sqlite');
+
+function loadDotEnvFile() {
+  const envPath = join(projectRoot, '.env');
+  if (!existsSync(envPath)) return;
+
+  const lines = readFileSync(envPath, 'utf-8').split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const equalsIndex = trimmed.indexOf('=');
+    if (equalsIndex <= 0) continue;
+
+    const key = trimmed.slice(0, equalsIndex).trim();
+    let value = trimmed.slice(equalsIndex + 1).trim();
+    if (!key || process.env[key] != null) continue;
+
+    if ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[key] = value;
+  }
+}
+
+loadDotEnvFile();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
 const SPEED_TEST_INTERVAL_MS = 60 * 60 * 1000;
 const PING_INTERVAL_MS = 3 * 60 * 1000;
 const CONNECTIVITY_PING_TIMEOUT_MS = 10000;
+const OPENVERSE_IMAGE_SEARCH_URL = 'https://api.openverse.org/v1/images/';
+const PEXELS_IMAGE_SEARCH_URL = 'https://api.pexels.com/v1/search';
+const PIXABAY_IMAGE_SEARCH_URL = 'https://pixabay.com/api/';
+const UNSPLASH_IMAGE_SEARCH_URL = 'https://api.unsplash.com/search/photos';
 
 mkdirSync(dataDir, { recursive: true });
 
@@ -112,6 +142,18 @@ function loadServerConfig() {
   }
 }
 
+function configuredImageProviders(providers) {
+  const list = Array.isArray(providers) && providers.length ? providers : ['openverse'];
+  const configured = list.filter(provider => {
+    if (provider === 'openverse') return true;
+    if (provider === 'pexels') return Boolean(process.env.PEXELS_API_KEY);
+    if (provider === 'pixabay') return Boolean(process.env.PIXABAY_API_KEY);
+    if (provider === 'unsplash') return Boolean(process.env.UNSPLASH_ACCESS_KEY);
+    return false;
+  });
+  return configured.length ? configured : ['openverse'];
+}
+
 function getSanitizedConfig() {
   const c = loadServerConfig();
   if (!c) return {};
@@ -125,6 +167,12 @@ function getSanitizedConfig() {
     out.calendar = {
       ...(cal.holidayCountry != null && { holidayCountry: cal.holidayCountry }),
       ...(cal.holidayState != null && { holidayState: cal.holidayState })
+    };
+  }
+  if (out.wallpaper) {
+    out.wallpaper = {
+      ...out.wallpaper,
+      providers: configuredImageProviders(out.wallpaper.providers)
     };
   }
   return out;
@@ -301,58 +349,273 @@ app.use(express.json());
 const distPath = join(__dirname, '..', 'dist');
 app.use(express.static(distPath));
 
-// Reddit API proxy endpoint – use browser-like headers
-const REDDIT_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'application/json, text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Accept-Language': 'en-US,en;q=0.9',
-  'Accept-Encoding': 'gzip, deflate, br',
-  'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-  'Sec-Ch-Ua-Mobile': '?0',
-  'Sec-Ch-Ua-Platform': '"Windows"',
-  'Sec-Fetch-Dest': 'document',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-Site': 'none',
-  'Upgrade-Insecure-Requests': '1'
-};
+function sanitizeImageQuery(raw) {
+  const value = String(raw || '').trim();
+  if (!value || value.length > 80) {
+    throw new Error('Invalid image query');
+  }
+  return value;
+}
 
-app.get('/api/reddit/:subreddit', async (req, res) => {
+function clampInteger(raw, fallback, min, max) {
+  const parsed = Number.parseInt(String(raw ?? ''), 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(Math.max(parsed, min), max);
+}
+
+function missingImageProviderKey(provider, envName) {
+  return {
+    status: 503,
+    body: {
+      error: `${provider} API key not configured`,
+      env: envName
+    }
+  };
+}
+
+// Openverse image search proxy endpoint
+app.get('/api/images/openverse', async (req, res) => {
   try {
-    const subreddit = sanitizeRedditSubreddit(req.params.subreddit);
-    const sort = sanitizeRedditSort(req.query.sort);
-    
-    const basePath = `/r/${subreddit}/${sort}.json`;
-    const hosts = ['https://www.reddit.com', 'https://old.reddit.com'];
+    const query = sanitizeImageQuery(req.query.query || req.query.q);
+    const limit = clampInteger(req.query.limit, 10, 1, 20);
+    const page = clampInteger(req.query.page, 1, 1, 50);
 
-    let lastError;
-    for (const base of hosts) {
-      try {
-        const response = await axios.get(base + basePath, {
-          headers: REDDIT_HEADERS,
-          timeout: 10000,
-          validateStatus: () => true
-        });
-        if (response.status === 200) {
-          return res.json(response.data);
-        }
-        lastError = { status: response.status, statusText: response.statusText };
-      } catch (err) {
-        lastError = err.response
-          ? { status: err.response.status, statusText: err.response.statusText }
-          : err;
-      }
+    const response = await axios.get(OPENVERSE_IMAGE_SEARCH_URL, {
+      params: {
+        q: query,
+        page_size: limit,
+        page,
+        aspect_ratio: 'wide',
+        mature: false,
+        excluded_source: 'wikimedia'
+      },
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'homeorganizer/1.0'
+      },
+      timeout: 10000,
+      validateStatus: () => true
+    });
+
+    if (response.status !== 200 || !Array.isArray(response.data?.results)) {
+      const message = response.statusText || 'Failed to fetch Openverse images';
+      return res.status(response.status || 502).json({ error: message });
     }
 
-    const status = lastError?.status || 500;
-    const message = lastError?.statusText || 'Failed to fetch Reddit data';
-    res.status(status).json({ error: message });
+    const images = response.data.results.map(image => ({
+      id: image.id,
+      title: image.title,
+      url: image.url,
+      thumbnail: image.thumbnail,
+      creator: image.creator,
+      creator_url: image.creator_url,
+      license: image.license,
+      license_version: image.license_version,
+      license_url: image.license_url,
+      provider: image.provider,
+      source: image.source,
+      foreign_landing_url: image.foreign_landing_url,
+      attribution: image.attribution,
+      mature: image.mature,
+      width: image.width,
+      height: image.height,
+      filetype: image.filetype
+    }));
+
+    res.json({ images });
   } catch (error) {
-    if (error.message === 'Invalid subreddit' || error.message === 'Invalid sort') {
+    if (error.message === 'Invalid image query') {
       return res.status(400).json({ error: error.message });
     }
-    console.error('Error fetching Reddit data:', error);
+    console.error('Error fetching Openverse images:', error);
     const status = error.response?.status || 500;
-    const message = error.response?.statusText || 'Failed to fetch Reddit data';
+    const message = error.response?.statusText || 'Failed to fetch Openverse images';
+    res.status(status).json({ error: message });
+  }
+});
+
+app.get('/api/images/pexels', async (req, res) => {
+  try {
+    const apiKey = process.env.PEXELS_API_KEY;
+    if (!apiKey) {
+      const error = missingImageProviderKey('Pexels', 'PEXELS_API_KEY');
+      return res.status(error.status).json(error.body);
+    }
+
+    const query = sanitizeImageQuery(req.query.query || req.query.q);
+    const limit = clampInteger(req.query.limit, 10, 1, 20);
+    const page = clampInteger(req.query.page, 1, 1, 50);
+
+    const response = await axios.get(PEXELS_IMAGE_SEARCH_URL, {
+      params: {
+        query,
+        orientation: 'landscape',
+        per_page: limit,
+        page
+      },
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': apiKey
+      },
+      timeout: 10000,
+      validateStatus: () => true
+    });
+
+    if (response.status !== 200 || !Array.isArray(response.data?.photos)) {
+      const message = response.statusText || 'Failed to fetch Pexels images';
+      return res.status(response.status || 502).json({ error: message });
+    }
+
+    const images = response.data.photos.map(photo => ({
+      id: photo.id,
+      title: photo.alt || `Pexels photo by ${photo.photographer}`,
+      url: photo.src?.landscape || photo.src?.large2x || photo.src?.large || photo.src?.original,
+      thumbnail: photo.src?.medium || photo.src?.small,
+      creator: photo.photographer,
+      creator_url: photo.photographer_url,
+      provider: 'pexels',
+      source: 'pexels',
+      foreign_landing_url: photo.url,
+      attribution: `Photo by ${photo.photographer} on Pexels`,
+      mature: false,
+      width: photo.width,
+      height: photo.height,
+      filetype: 'image/jpeg'
+    }));
+
+    res.json({ images });
+  } catch (error) {
+    if (error.message === 'Invalid image query') {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Error fetching Pexels images:', error);
+    const status = error.response?.status || 500;
+    const message = error.response?.statusText || 'Failed to fetch Pexels images';
+    res.status(status).json({ error: message });
+  }
+});
+
+app.get('/api/images/pixabay', async (req, res) => {
+  try {
+    const apiKey = process.env.PIXABAY_API_KEY;
+    if (!apiKey) {
+      const error = missingImageProviderKey('Pixabay', 'PIXABAY_API_KEY');
+      return res.status(error.status).json(error.body);
+    }
+
+    const query = sanitizeImageQuery(req.query.query || req.query.q);
+    const limit = clampInteger(req.query.limit, 10, 3, 20);
+    const page = clampInteger(req.query.page, 1, 1, 50);
+
+    const response = await axios.get(PIXABAY_IMAGE_SEARCH_URL, {
+      params: {
+        key: apiKey,
+        q: query,
+        image_type: 'photo',
+        orientation: 'horizontal',
+        safesearch: true,
+        per_page: limit,
+        page
+      },
+      headers: {
+        'Accept': 'application/json'
+      },
+      timeout: 10000,
+      validateStatus: () => true
+    });
+
+    if (response.status !== 200 || !Array.isArray(response.data?.hits)) {
+      const message = response.statusText || 'Failed to fetch Pixabay images';
+      return res.status(response.status || 502).json({ error: message });
+    }
+
+    const images = response.data.hits.map(image => ({
+      id: image.id,
+      title: image.tags || 'Pixabay photo',
+      url: image.largeImageURL || image.webformatURL,
+      thumbnail: image.previewURL || image.webformatURL,
+      creator: image.user,
+      creator_url: image.user ? `https://pixabay.com/users/${image.user}-${image.user_id}/` : null,
+      provider: 'pixabay',
+      source: 'pixabay',
+      foreign_landing_url: image.pageURL,
+      attribution: image.user ? `Image by ${image.user} on Pixabay` : 'Image from Pixabay',
+      mature: false,
+      width: image.imageWidth,
+      height: image.imageHeight,
+      filetype: 'image/jpeg'
+    }));
+
+    res.json({ images });
+  } catch (error) {
+    if (error.message === 'Invalid image query') {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Error fetching Pixabay images:', error);
+    const status = error.response?.status || 500;
+    const message = error.response?.statusText || 'Failed to fetch Pixabay images';
+    res.status(status).json({ error: message });
+  }
+});
+
+app.get('/api/images/unsplash', async (req, res) => {
+  try {
+    const apiKey = process.env.UNSPLASH_ACCESS_KEY;
+    if (!apiKey) {
+      const error = missingImageProviderKey('Unsplash', 'UNSPLASH_ACCESS_KEY');
+      return res.status(error.status).json(error.body);
+    }
+
+    const query = sanitizeImageQuery(req.query.query || req.query.q);
+    const limit = clampInteger(req.query.limit, 10, 1, 20);
+    const page = clampInteger(req.query.page, 1, 1, 50);
+
+    const response = await axios.get(UNSPLASH_IMAGE_SEARCH_URL, {
+      params: {
+        query,
+        orientation: 'landscape',
+        content_filter: 'high',
+        per_page: limit,
+        page
+      },
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Client-ID ${apiKey}`
+      },
+      timeout: 10000,
+      validateStatus: () => true
+    });
+
+    if (response.status !== 200 || !Array.isArray(response.data?.results)) {
+      const message = response.statusText || 'Failed to fetch Unsplash images';
+      return res.status(response.status || 502).json({ error: message });
+    }
+
+    const images = response.data.results.map(photo => ({
+      id: photo.id,
+      title: photo.alt_description || photo.description || `Unsplash photo by ${photo.user?.name}`,
+      url: photo.urls?.regular || photo.urls?.full,
+      thumbnail: photo.urls?.small || photo.urls?.thumb,
+      creator: photo.user?.name,
+      creator_url: photo.user?.links?.html,
+      provider: 'unsplash',
+      source: 'unsplash',
+      foreign_landing_url: photo.links?.html,
+      attribution: photo.user?.name ? `Photo by ${photo.user.name} on Unsplash` : 'Photo from Unsplash',
+      mature: false,
+      width: photo.width,
+      height: photo.height,
+      filetype: 'image/jpeg'
+    }));
+
+    res.json({ images });
+  } catch (error) {
+    if (error.message === 'Invalid image query') {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Error fetching Unsplash images:', error);
+    const status = error.response?.status || 500;
+    const message = error.response?.statusText || 'Failed to fetch Unsplash images';
     res.status(status).json({ error: message });
   }
 });

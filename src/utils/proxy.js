@@ -20,12 +20,7 @@ export function getProxiedUrl(url) {
         (urlObj.hostname.includes('cbc.ca') && urlObj.pathname.includes('/lineup/'))) {
       return `/api/rss${pathAndQuery}`;
     }
-    
-    // Proxy Reddit API
-    if (urlObj.hostname.includes('reddit.com')) {
-      return `/api/reddit${pathAndQuery}`;
-    }
-    
+
     // Proxy Google Calendar
     if (urlObj.hostname.includes('calendar.google.com')) {
       return `/api/calendar${pathAndQuery}`;

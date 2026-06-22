@@ -1,8 +1,5 @@
 import { isIP } from 'node:net';
 
-const REDDIT_SORTS = new Set(['hot', 'new', 'top', 'rising', 'controversial']);
-const REDDIT_SUBREDDIT_RE = /^[A-Za-z0-9_]{1,21}$/;
-
 const BLOCKED_HOSTNAMES = new Set([
   'localhost',
   'metadata.google.internal',
@@ -92,20 +89,4 @@ export function isAllowedRssFeedUrl(rawUrl, allowedUrls) {
   } catch {
     return false;
   }
-}
-
-export function sanitizeRedditSubreddit(raw) {
-  const value = String(raw || '').trim();
-  if (!REDDIT_SUBREDDIT_RE.test(value)) {
-    throw new Error('Invalid subreddit');
-  }
-  return value;
-}
-
-export function sanitizeRedditSort(raw) {
-  const value = String(raw || 'hot').trim().toLowerCase();
-  if (!REDDIT_SORTS.has(value)) {
-    throw new Error('Invalid sort');
-  }
-  return value;
 }

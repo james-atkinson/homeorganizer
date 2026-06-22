@@ -3,9 +3,7 @@ import assert from 'node:assert/strict';
 import {
   assertSafeOutboundUrl,
   getConfiguredRssUrls,
-  isAllowedRssFeedUrl,
-  sanitizeRedditSort,
-  sanitizeRedditSubreddit
+  isAllowedRssFeedUrl
 } from './urlSafety.js';
 
 test('assertSafeOutboundUrl allows public https URLs', () => {
@@ -39,14 +37,4 @@ test('RSS allowlist only permits configured feeds', () => {
     isAllowedRssFeedUrl('http://evil.example/feed.xml', allowed),
     false
   );
-});
-
-test('sanitizeRedditSubreddit rejects invalid names', () => {
-  assert.equal(sanitizeRedditSubreddit('wallpapers'), 'wallpapers');
-  assert.throws(() => sanitizeRedditSubreddit('../admin'), /Invalid subreddit/);
-});
-
-test('sanitizeRedditSort allowlists known values', () => {
-  assert.equal(sanitizeRedditSort('hot'), 'hot');
-  assert.throws(() => sanitizeRedditSort('drop-table'), /Invalid sort/);
 });

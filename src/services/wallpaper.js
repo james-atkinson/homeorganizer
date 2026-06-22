@@ -7,103 +7,164 @@ let currentImageIndex = 0;
 const TARGET_WIDTH = 1920;
 const TARGET_HEIGHT = 1080;
 const TARGET_ASPECT_RATIO = Math.round((TARGET_WIDTH / TARGET_HEIGHT) * 10) / 10;
-const PICSUM_BASE = 'https://picsum.photos/1920/1080';
-const PICSUM_POOL_SIZE = 20;
+const OPENVERSE_QUERY_LIMIT = 8;
+const OPENVERSE_QUERIES_PER_REFRESH = 4;
+const DEFAULT_IMAGE_POOL_REFRESH_INTERVAL = 2 * 60 * 60 * 1000;
+const DEFAULT_PROVIDERS = ['openverse', 'pexels', 'pixabay', 'unsplash'];
+const ALLOWED_PROVIDERS = new Set(DEFAULT_PROVIDERS);
+const DEFAULT_QUERIES = [
+  'landscape',
+  'scenic landscape',
+  'panoramic view',
+  'city skyline',
+  'city at night',
+  'street photography',
+  'architecture',
+  'modern architecture',
+  'historic architecture',
+  'ocean',
+  'coastline',
+  'beach',
+  'waterfall',
+  'river',
+  'lake',
+  'forest',
+  'autumn forest',
+  'misty forest',
+  'mountains',
+  'snowy mountains',
+  'desert',
+  'canyon',
+  'prairie',
+  'field',
+  'sunrise',
+  'sunset',
+  'clouds',
+  'storm clouds',
+  'space',
+  'stars',
+  'galaxy',
+  'abstract texture',
+  'abstract pattern',
+  'geometric pattern',
+  'colorful abstract',
+  'wildlife',
+  'birds',
+  'flowers',
+  'botanical',
+  'northern lights',
+  'weather',
+  'travel',
+  'train',
+  'bridge',
+  'harbour',
+  'island',
+  'garden',
+  'macro photography',
+  'aerial photography',
+  'night photography',
+  'winter scene',
+  'spring flowers',
+  'summer landscape',
+  'autumn landscape'
+];
 
-function getPicsumEntries() {
-  const entries = [];
-  for (let i = 0; i < PICSUM_POOL_SIZE; i++) {
-    const seed = Math.floor(Math.random() * 100000) + 1;
-    entries.push({
-      url: `${PICSUM_BASE}?random=${seed}`,
-      source: 'picsum',
-      credit: 'Photos from Picsum'
-    });
-  }
-  return entries;
+function shuffle(items) {
+  return [...items].sort(() => Math.random() - 0.5);
 }
 
-// Fetch images from Reddit following the working pattern
-async function fetchRedditImages(subreddits) {
+function imageCredit(image) {
+  if (image.attribution) return image.attribution;
+
+  const parts = [];
+  if (image.title) parts.push(image.title);
+  if (image.creator) parts.push(`by ${image.creator}`);
+  if (image.license) parts.push(`CC ${String(image.license).toUpperCase()}`);
+  if (image.provider) parts.push(`via ${image.provider}`);
+  return parts.join(' — ');
+}
+
+function isSupportedImage(image) {
+  const url = image?.url || image?.thumbnail;
+  if (!url || !/^https?:\/\//i.test(url)) return false;
+
+  const filetype = String(image.filetype || '').toLowerCase();
+  const hasSupportedFiletype = filetype.startsWith('image/jpeg') ||
+    filetype.startsWith('image/png') ||
+    filetype.startsWith('image/webp');
+  const hasSupportedExtension = /\.(jpe?g|png|webp)(?:[?#].*)?$/i.test(url);
+  if (filetype && !hasSupportedFiletype) return false;
+  if (!filetype && !hasSupportedExtension && !image.thumbnail) return false;
+
+  if (image.mature) return false;
+
+  if (image.width && image.height) {
+    if (image.width < 800 || image.height < 450) return false;
+    const itemAspectRatio = Math.round((image.width / image.height) * 10) / 10;
+    if (itemAspectRatio < 1.2 || Math.abs(itemAspectRatio - TARGET_ASPECT_RATIO) > 0.8) return false;
+  }
+
+  return true;
+}
+
+async function fetchProviderImages(provider, queries) {
   const images = [];
-  
-  for (const subreddit of subreddits) {
+  const queryList = Array.isArray(queries) && queries.length ? queries : DEFAULT_QUERIES;
+  const selectedQueries = shuffle(queryList)
+    .slice(0, OPENVERSE_QUERIES_PER_REFRESH);
+
+  for (const query of selectedQueries) {
     try {
-      const apiUrl = `/api/reddit/${subreddit}?limit=50&sort=hot`;
+      const page = Math.floor(Math.random() * 10) + 1;
+      const params = new URLSearchParams({
+        query,
+        limit: String(OPENVERSE_QUERY_LIMIT),
+        page: String(page)
+      });
+      const apiUrl = `/api/images/${provider}?${params.toString()}`;
       const response = await fetch(apiUrl);
-      
+
       if (!response.ok) {
-        console.warn(`Reddit API returned ${response.status} for r/${subreddit}`);
+        console.warn(`${provider} image API returned ${response.status} for "${query}"`);
         continue;
       }
-      
+
       const data = await response.json();
-      if (data.data && data.data.children) {
-        data.data.children.forEach(item => {
-          const postData = item.data;
-          
-          // Skip gallery posts
-          if (postData.url && postData.url.includes('gallery')) {
-            return;
-          }
-          
-          // Must have preview images
-          if (!postData.preview || !postData.preview.images || postData.preview.images.length === 0) {
-            return;
-          }
-          
-          const preview = postData.preview.images[0];
-          const source = preview.source;
-          
-          // Check aspect ratio match (allow some tolerance)
-          if (source && source.width && source.height) {
-            const itemAspectRatio = Math.round((source.width / source.height) * 10) / 10;
-            // Allow 0.1 tolerance for aspect ratio
-            if (Math.abs(itemAspectRatio - TARGET_ASPECT_RATIO) > 0.1) {
-              return;
-            }
-          }
-          
-          // Use the direct URL from postData.url (this is the actual image URL for image posts)
-          // Fallback to preview source URL if needed
-          let imageUrl = postData.url;
-          
-          // Verify it's an image URL
-          if (!imageUrl || (!imageUrl.match(/\.(jpg|jpeg|png|webp)$/i) && !imageUrl.includes('i.redd.it'))) {
-            // Try preview source as fallback
-            if (source && source.url) {
-              imageUrl = source.url.replace(/&amp;/g, '&');
-            } else {
-              return; // Skip if no valid image URL
-            }
-          }
-          
-          const title = postData.title || '';
-          const creditTitle = title.length > 80 ? title.slice(0, 77) + '...' : title;
-          const credit = creditTitle ? `${creditTitle} — r/${subreddit}` : `r/${subreddit}`;
-          images.push({
-            url: imageUrl,
-            title: postData.title,
-            author: postData.author,
-            score: postData.score,
-            subreddit: subreddit,
-            source: 'reddit',
-            credit
+      if (Array.isArray(data.images)) {
+        data.images
+          .filter(isSupportedImage)
+          .forEach(image => {
+            const imageUrl = image.url || image.thumbnail;
+            images.push({
+              url: imageUrl,
+              title: image.title,
+              author: image.creator,
+              source: provider,
+              provider: image.provider || image.source,
+              credit: imageCredit(image)
+            });
           });
-        });
       }
     } catch (error) {
-      console.warn(`Error fetching wallpaper from r/${subreddit}:`, error.message);
+      console.warn(`Error fetching ${provider} images for "${query}":`, error.message);
     }
   }
-  
+
   return images;
 }
 
 export async function fetchWallpaperImages() {
   try {
     const config = await loadConfig();
-    const { subreddits, imagePoolRefreshInterval, selectionType = 'random' } = config.wallpaper;
+    const {
+      providers = DEFAULT_PROVIDERS,
+      queries = DEFAULT_QUERIES,
+      imagePoolRefreshInterval = DEFAULT_IMAGE_POOL_REFRESH_INTERVAL,
+      selectionType = 'random'
+    } = config.wallpaper || {};
+    const configuredProviders = (Array.isArray(providers) && providers.length ? providers : DEFAULT_PROVIDERS)
+      .filter(provider => ALLOWED_PROVIDERS.has(provider));
+    const providerList = configuredProviders.length ? configuredProviders : DEFAULT_PROVIDERS;
     
     const now = Date.now();
     
@@ -114,14 +175,10 @@ export async function fetchWallpaperImages() {
 
     let images = [];
 
-    // Fetch from Reddit
-    if (subreddits && subreddits.length > 0) {
-      images = await fetchRedditImages(subreddits);
+    for (const provider of providerList) {
+      const providerImages = await fetchProviderImages(provider, queries);
+      images = [...images, ...providerImages];
     }
-
-    // Add Picsum images to the pool
-    const picsumEntries = getPicsumEntries();
-    images = [...images, ...picsumEntries];
 
     // Sort by selection type
     if (selectionType === 'highest' && images.length > 0) {
@@ -166,13 +223,13 @@ export function resetWallpaperIndex() {
   currentImageIndex = 0;
 }
 
-/** Get a random image from the combined Reddit + Picsum pool (fetches pool if needed). */
+/** Get a random image from the configured wallpaper pool (fetches pool if needed). */
 export async function getRandomWallpaper() {
   const images = await fetchWallpaperImages();
   if (images.length === 0) {
-    return { url: `${PICSUM_BASE}?random=${Date.now()}`, credit: 'Photos from Picsum' };
+    return { url: null, credit: 'Background image unavailable' };
   }
   const index = Math.floor(Math.random() * images.length);
   const img = images[index];
-  return { url: img.url, credit: img.credit || (img.source === 'reddit' ? `r/${img.subreddit}` : 'Photos from Picsum') };
+  return { url: img.url, credit: img.credit || 'Background image' };
 }

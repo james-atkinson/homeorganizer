@@ -52,7 +52,7 @@ let lastFetchTime = 0;
 export async function fetchHeadlines() {
   try {
     const config = await loadConfig();
-    const { rssFeeds, reddit, refreshInterval } = config.news;
+    const { rssFeeds, refreshInterval } = config.news;
     
     const now = Date.now();
     
@@ -80,37 +80,6 @@ export async function fetchHeadlines() {
         });
       } catch (error) {
         console.error(`Error fetching RSS feed ${feed.name}:`, error);
-      }
-    }
-
-    // Fetch Reddit feeds
-    if (reddit.enabled) {
-      for (const subreddit of reddit.subreddits) {
-        try {
-          const apiUrl = `/api/reddit/${subreddit}?limit=10&sort=hot`;
-          const response = await fetch(apiUrl);
-          if (!response.ok) {
-            console.warn(`Reddit API returned ${response.status} for r/${subreddit}`);
-            continue;
-          }
-          
-          const data = await response.json();
-          if (data.data && data.data.children) {
-            data.data.children.forEach(post => {
-              const postData = post.data;
-              const date = postData.created_utc != null ? new Date(postData.created_utc * 1000) : null;
-              headlines.push({
-                title: postData.title,
-                source: `r/${subreddit}`,
-                type: 'reddit',
-                link: `https://www.reddit.com${postData.permalink}`,
-                date
-              });
-            });
-          }
-        } catch (error) {
-          console.error(`Error fetching Reddit r/${subreddit}:`, error);
-        }
       }
     }
 

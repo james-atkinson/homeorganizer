@@ -19,20 +19,18 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { loadConfig } from '../utils/config.js';
 import { getRandomWallpaper } from '../services/wallpaper.js';
 
-const PICSUM_BASE = 'https://picsum.photos/1920/1080';
-
 const DEFAULT_OVERLAY_OPACITY = 0.3;
+const FALLBACK_BACKGROUND = 'linear-gradient(135deg, #162033 0%, #263f5f 48%, #111827 100%)';
 const currentImage = ref(null);
-const credit = ref('Photos from Picsum');
+const credit = ref('Background image unavailable');
 const showCredit = ref(true);
 const overlayOpacity = ref(DEFAULT_OVERLAY_OPACITY);
 
 let rotationInterval = null;
 
 const backgroundStyle = computed(() => {
-  const url = currentImage.value?.url || `${PICSUM_BASE}?random=1`;
   return {
-    backgroundImage: `url('${url}')`
+    backgroundImage: currentImage.value?.url ? `url('${currentImage.value.url}')` : FALLBACK_BACKGROUND
   };
 });
 
@@ -91,12 +89,12 @@ async function loadRandomImage() {
     const img = await getRandomWallpaper();
     currentImage.value = img;
     credit.value = img.credit;
-    const luminance = await measureBrightness(img.url);
+    const luminance = img.url ? await measureBrightness(img.url) : null;
     overlayOpacity.value = opacityForLuminance(luminance);
   } catch (err) {
-    console.warn('Background image load failed, using Picsum fallback:', err);
-    currentImage.value = { url: `${PICSUM_BASE}?random=${Date.now()}`, credit: 'Photos from Picsum' };
-    credit.value = 'Photos from Picsum';
+    console.warn('Background image load failed, using gradient fallback:', err);
+    currentImage.value = null;
+    credit.value = 'Background image unavailable';
     overlayOpacity.value = DEFAULT_OVERLAY_OPACITY;
   }
 }
