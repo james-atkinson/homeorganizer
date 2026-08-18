@@ -163,9 +163,23 @@ async function loadEvents() {
 
 let refreshInterval = null;
 
+// Advance to the new month when the date rolls over, then reload events.
+// currentDate is otherwise fixed at mount, so without this the grid and the
+// month/year header stay on the old month until the app is reloaded.
+function refreshCalendar() {
+  const now = new Date();
+  if (
+    now.getMonth() !== currentDate.value.getMonth() ||
+    now.getFullYear() !== currentDate.value.getFullYear()
+  ) {
+    currentDate.value = now;
+  }
+  loadEvents();
+}
+
 onMounted(() => {
   loadEvents();
-  refreshInterval = setInterval(loadEvents, 5 * 60 * 1000);
+  refreshInterval = setInterval(refreshCalendar, 5 * 60 * 1000);
 });
 
 onUnmounted(() => {
