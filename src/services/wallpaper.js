@@ -7,10 +7,10 @@ let currentImageIndex = 0;
 const TARGET_WIDTH = 1920;
 const TARGET_HEIGHT = 1080;
 const TARGET_ASPECT_RATIO = Math.round((TARGET_WIDTH / TARGET_HEIGHT) * 10) / 10;
-const OPENVERSE_QUERY_LIMIT = 8;
-const OPENVERSE_QUERIES_PER_REFRESH = 4;
+const IMAGES_PER_QUERY = 8;
+const QUERIES_PER_REFRESH = 4;
 const DEFAULT_IMAGE_POOL_REFRESH_INTERVAL = 2 * 60 * 60 * 1000;
-const DEFAULT_PROVIDERS = ['openverse', 'nasa', 'pexels', 'pixabay', 'unsplash'];
+const DEFAULT_PROVIDERS = ['pexels', 'pixabay', 'unsplash'];
 const ALLOWED_PROVIDERS = new Set(DEFAULT_PROVIDERS);
 const DEFAULT_QUERIES = [
   'landscape',
@@ -119,14 +119,14 @@ async function fetchProviderImages(provider, queries) {
   const images = [];
   const queryList = Array.isArray(queries) && queries.length ? queries : DEFAULT_QUERIES;
   const selectedQueries = shuffle(queryList)
-    .slice(0, OPENVERSE_QUERIES_PER_REFRESH);
+    .slice(0, QUERIES_PER_REFRESH);
 
   for (const query of selectedQueries) {
     try {
       const page = Math.floor(Math.random() * 10) + 1;
       const params = new URLSearchParams({
         query,
-        limit: String(OPENVERSE_QUERY_LIMIT),
+        limit: String(IMAGES_PER_QUERY),
         page: String(page)
       });
       const apiUrl = `/api/images/${provider}?${params.toString()}`;
