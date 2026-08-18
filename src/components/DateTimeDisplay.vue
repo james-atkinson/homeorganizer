@@ -16,7 +16,6 @@ function updateDateTime() {
   
   formattedDate.value = now.toLocaleDateString('en-US', {
     weekday: 'long',
-    year: 'numeric',
     month: 'long',
     day: 'numeric'
   });
