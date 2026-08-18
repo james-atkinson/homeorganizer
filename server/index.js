@@ -64,6 +64,11 @@ const SPEED_TREND_SAMPLE_COUNT = 7;
 const PEXELS_IMAGE_SEARCH_URL = 'https://api.pexels.com/v1/search';
 const PIXABAY_IMAGE_SEARCH_URL = 'https://pixabay.com/api/';
 const UNSPLASH_IMAGE_SEARCH_URL = 'https://api.unsplash.com/search/photos';
+const ESA_IMAGE_FEEDS = [
+  { url: 'https://esahubble.org/images/json/', source: 'esa/hubble' },
+  { url: 'https://esawebb.org/images/json/', source: 'esa/webb' }
+];
+const ESA_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const DEFAULT_NETWORK_STATUS_CONFIG = {
   uptimeWindowHours: 24,
   localCheck: {
@@ -308,6 +313,7 @@ function configuredImageProviders(providers) {
     if (provider === 'pexels') return Boolean(process.env.PEXELS_API_KEY);
     if (provider === 'pixabay') return Boolean(process.env.PIXABAY_API_KEY);
     if (provider === 'unsplash') return Boolean(process.env.UNSPLASH_ACCESS_KEY);
+    if (provider === 'esa') return true; // keyless: ESA/Hubble + ESA/Webb (CC BY 4.0)
     return false;
   });
   return configured;
@@ -1019,6 +1025,154 @@ app.get('/api/images/unsplash', async (req, res) => {
     const status = error.response?.status || 500;
     const message = error.response?.statusText || 'Failed to fetch Unsplash images';
     res.status(status).json({ error: message });
+  }
+});
+
+// Djangoplicity (ESA/Hubble, ESA/Webb) exposes string fields as Python byte-string
+// reprs, e.g. "b'NASA, ESA...'" or "b\"Hubble's View...\"". The bytes are UTF-8, so
+// non-ASCII appears as \xNN escapes (e.g. \xe2\x80\x94 = em-dash). Strip the b'...'
+// wrapper, decode the escapes back into raw bytes, then interpret those bytes as UTF-8.
+function unwrapEsaString(value) {
+  if (typeof value !== 'string') return '';
+  const match = value.match(/^b(['"])([\s\S]*)\1$/);
+  if (!match) return value.trim();
+  const inner = match[2];
+
+  const bytes = [];
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (ch !== '\\') {
+      // Non-ASCII source chars (rare) — push their UTF-8 bytes.
+      const code = inner.charCodeAt(i);
+      if (code < 0x80) bytes.push(code);
+      else for (const b of Buffer.from(ch, 'utf-8')) bytes.push(b);
+      continue;
+    }
+    const next = inner[i + 1];
+    if (next === 'x') {
+      bytes.push(parseInt(inner.substr(i + 2, 2), 16));
+      i += 3;
+    } else if (next === 'n') { bytes.push(0x0a); i += 1; }
+    else if (next === 't') { bytes.push(0x09); i += 1; }
+    else if (next === 'r') { bytes.push(0x0d); i += 1; }
+    else if (next === '\\') { bytes.push(0x5c); i += 1; }
+    else if (next === "'") { bytes.push(0x27); i += 1; }
+    else if (next === '"') { bytes.push(0x22); i += 1; }
+    else { bytes.push(0x5c); } // lone backslash
+  }
+  return Buffer.from(bytes).toString('utf-8').replace(/\s+/g, ' ').trim();
+}
+
+function mapEsaItem(item, source) {
+  const formats = item?.formats_url || {};
+  const url = formats.banner1920 || formats.large || formats.screen;
+  if (!url) return null;
+  // Djangoplicity JSON uses flat dotted keys, not nested objects.
+  const dims = item?.['Spatial.ReferenceDimension'];
+  const width = Array.isArray(dims) ? parseFloat(dims[0]) : NaN;
+  const height = Array.isArray(dims) ? parseFloat(dims[1]) : NaN;
+  const credit = unwrapEsaString(item?.Credit) || unwrapEsaString(item?.Creator);
+  const subjectNames = Array.isArray(item?.['Subject.Name'])
+    ? item['Subject.Name'].map(unwrapEsaString).filter(Boolean)
+    : [];
+  return {
+    id: item?.ID || item?.ResourceID || url,
+    title: unwrapEsaString(item?.Title) || 'ESA space image',
+    url,
+    thumbnail: formats.thumb700x || formats.thumb350x || url,
+    creator: credit || null,
+    creator_url: item?.CreatorURL || null,
+    provider: 'esa',
+    source,
+    foreign_landing_url: item?.ReferenceURL || null,
+    attribution: credit ? `${credit} (CC BY 4.0)` : 'ESA (CC BY 4.0)',
+    mature: false,
+    width: Number.isFinite(width) ? width : undefined,
+    height: Number.isFinite(height) ? height : undefined,
+    filetype: 'image/jpeg',
+    // Retained only for optional soft-filtering by query keyword.
+    _keywords: [unwrapEsaString(item?.Title), ...subjectNames]
+      .filter(Boolean).join(' ').toLowerCase()
+  };
+}
+
+let esaCache = [];
+let esaLastFetch = 0;
+
+// Fetch and map one ESA feed, retrying once. The feed itself is fast (~0.4s), but a
+// cold request can time out when it races the server's periodic speed test, which
+// saturates the link (worst case ~60s). So back off before the retry to let an
+// in-flight speed test finish, rather than firing the second attempt into the same
+// congestion. This keeps a cold miss from leaving the pool empty until the next rotation.
+const ESA_FETCH_TIMEOUT_MS = 20000;
+const ESA_RETRY_DELAY_MS = 45000;
+
+async function fetchEsaFeed(feed) {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const response = await axios.get(feed.url, {
+        headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+        responseType: 'json',
+        timeout: ESA_FETCH_TIMEOUT_MS,
+        validateStatus: () => true
+      });
+      if (response.status !== 200 || !Array.isArray(response.data)) return [];
+      return response.data
+        .map(item => mapEsaItem(item, feed.source))
+        .filter(Boolean);
+    } catch (error) {
+      const willRetry = attempt < 2;
+      console.error(
+        `Error fetching ${feed.source} feed${willRetry ? ' (retrying)' : ''}:`,
+        error.message
+      );
+      if (!willRetry) return [];
+      await new Promise(resolve => setTimeout(resolve, ESA_RETRY_DELAY_MS));
+    }
+  }
+  return [];
+}
+
+async function getEsaImages() {
+  if (esaCache.length && Date.now() - esaLastFetch < ESA_CACHE_TTL_MS) {
+    return esaCache;
+  }
+
+  const results = await Promise.all(ESA_IMAGE_FEEDS.map(fetchEsaFeed));
+
+  const images = results.flat();
+  if (images.length) {
+    esaCache = images;
+    esaLastFetch = Date.now();
+  }
+  return esaCache;
+}
+
+app.get('/api/images/esa', async (req, res) => {
+  try {
+    const limit = clampInteger(req.query.limit, 10, 1, 20);
+    const page = clampInteger(req.query.page, 1, 1, 50);
+    const rawQuery = String(req.query.query || req.query.q || '').trim().toLowerCase();
+
+    let images = await getEsaImages();
+    if (!images.length) {
+      return res.status(502).json({ error: 'Failed to fetch ESA images' });
+    }
+
+    // ESA feeds have no upstream text search. Soft-filter by keyword when a query is
+    // given, but fall back to the full pool if nothing matches so rotation never stalls.
+    if (rawQuery) {
+      const matched = images.filter(image => image._keywords.includes(rawQuery));
+      if (matched.length) images = matched;
+    }
+
+    const start = (page - 1) * limit;
+    const slice = images.slice(start, start + limit).map(({ _keywords, ...image }) => image);
+
+    res.json({ images: slice });
+  } catch (error) {
+    console.error('Error fetching ESA images:', error);
+    res.status(500).json({ error: 'Failed to fetch ESA images' });
   }
 });
 

@@ -78,7 +78,7 @@ function getDefaultConfig() {
     },
     wallpaper: {
       enabled: true,
-      providers: ["pexels", "pixabay", "unsplash"],
+      providers: ["pexels", "pixabay", "unsplash", "esa"],
       queries: [
         "landscape",
         "scenic landscape",

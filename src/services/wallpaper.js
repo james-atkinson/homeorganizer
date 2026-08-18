@@ -10,7 +10,7 @@ const TARGET_ASPECT_RATIO = Math.round((TARGET_WIDTH / TARGET_HEIGHT) * 10) / 10
 const IMAGES_PER_QUERY = 8;
 const QUERIES_PER_REFRESH = 4;
 const DEFAULT_IMAGE_POOL_REFRESH_INTERVAL = 2 * 60 * 60 * 1000;
-const DEFAULT_PROVIDERS = ['pexels', 'pixabay', 'unsplash'];
+const DEFAULT_PROVIDERS = ['pexels', 'pixabay', 'unsplash', 'esa'];
 const ALLOWED_PROVIDERS = new Set(DEFAULT_PROVIDERS);
 const DEFAULT_QUERIES = [
   'landscape',
